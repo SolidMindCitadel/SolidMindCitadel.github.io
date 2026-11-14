@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - main page (index.html)
+  ------------------------------------------------------------
+  Files this page needs (upload both to the top level of the repo):
+    index.html   this file
+    citadel.jpg  the gate picture (name must match exactly, lowercase)
+
+  Search these tags to jump to a section:
+    [CSS-COLORS]   night and daylight color sets
+    [CSS-BANNERS]  the four hall banners
+    [HTML-GATE]    the gate picture at the top
+    [HTML-HALLS]   the four halls (add links here later)
+    [HTML-FOOTER]  bottom of the page
+
+  Public site: no kids' full names, addresses or passwords anywhere.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SolidMind Citadel</title>
+<meta name="description" content="SolidMind Citadel: learn, test and build. Envision a Brighter Tomorrow.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* [CSS-COLORS] Night is the default look; daylight is used when the device is in light mode */
+:root {
+  color-scheme: dark;
+  --sky: #0F1B30;          /* page background, night sky */
+  --stone: #1A2740;        /* raised surfaces */
+  --banner: #1C2B4A;       /* banner cloth */
+  --gold: #D9A441;         /* trim, icons, headings */
+  --gold-soft: #A9802F;
+  --text: #EFE3C8;         /* parchment-colored text */
+  --text-dim: #B9AE96;
+  --arcane: #6CCBFF;       /* the blue glow from the orb */
+  --shadow: rgba(4, 8, 18, .55);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --sky: #E4E8EE;        /* daylight stone */
+    --stone: #F2F4F7;
+    --banner: #1C2B4A;     /* banners stay navy in daylight, like real cloth */
+    --gold: #8A6418;
+    --gold-soft: #B38A35;
+    --text: #1A2338;
+    --text-dim: #4A5468;
+    --arcane: #1C6FA8;
+    --shadow: rgba(26, 35, 56, .18);
+  }
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+
+body {
+  margin: 0;
+  background: var(--sky);
+  color: var(--text);
+  font-family: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+img { max-width: 100%; display: block; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--arcane); outline-offset: 4px; }
+
+.wrap { width: min(1100px, 100% - 2rem); margin-inline: auto; }
+
+/* [CSS-GATE] The picture sits in a gold-trimmed arch, like the doorway in the art */
+.gate {
+  margin-top: clamp(1rem, 4vw, 2.5rem);
+  padding: 6px;
+  background: linear-gradient(var(--gold), var(--gold-soft));
+  border-radius: 48% 48% 10px 10px / 18% 18% 10px 10px;
+  box-shadow: 0 30px 60px -20px var(--shadow);
+  max-width: 760px;
+  margin-inline: auto;
+}
+.gate img {
+  border-radius: inherit;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1199 / 1312;
+  object-fit: cover;
+  background: var(--stone);
+}
+
+.motto {
+  text-align: center;
+  margin: 2rem auto 0;
+  max-width: 34ch;
+}
+.motto h1 {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 800;
+  font-size: clamp(1.9rem, 5vw, 3rem);
+  letter-spacing: .04em;
+  line-height: 1.1;
+  color: var(--gold);
+  margin: 0;
+}
+.motto p {
+  margin: .75rem 0 0;
+  font-size: 1.2rem;
+  color: var(--text-dim);
+}
+
+/* Envision > Engineer > Create, carved into a stone strip */
+.path {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: .4rem 1rem;
+  margin: 1.5rem auto 0;
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 1rem;
+  letter-spacing: .08em;
+  color: var(--text);
+}
+.path span + span::before {
+  content: "\2726";        /* small star between words */
+  color: var(--arcane);
+  margin-right: 1rem;
+}
+
+/* [CSS-BANNERS] Each hall is a hanging banner with a pointed bottom */
+.halls-title {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: clamp(1.4rem, 3vw, 1.9rem);
+  text-align: center;
+  color: var(--gold);
+  margin: clamp(3rem, 8vw, 5rem) 0 .4rem;
+}
+.halls-sub {
+  text-align: center;
+  color: var(--text-dim);
+  margin: 0 auto 2.5rem;
+  max-width: 46ch;
+}
+.halls {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2.25rem 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.hall { position: relative; padding-top: 14px; }
+/* the rod each banner hangs from */
+.hall::before {
+  content: "";
+  position: absolute;
+  top: 4px; left: -6px; right: -6px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(var(--gold), var(--gold-soft));
+}
+.cloth {
+  --notch: 34px;
+  display: block;
+  height: 100%;
+  text-decoration: none;
+  padding: 3px;            /* gold edge */
+  background: var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), 50% 100%, 0 calc(100% - var(--notch)));
+  transform-origin: top center;
+  filter: drop-shadow(0 18px 18px var(--shadow));
+}
+.cloth-inner {
+  height: 100%;
+  background: var(--banner);
+  clip-path: inherit;
+  padding: 1.6rem 1.25rem calc(var(--notch) + 1.6rem);
+  text-align: center;
+  color: #EFE3C8;          /* banner text stays light in both themes */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .6rem;
+}
+.cloth svg {
+  width: 56px; height: 56px;
+  stroke: #E3B456; fill: none;
+  stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round;
+}
+.cloth h3 {
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 1.35rem;
+  line-height: 1.2;
+  margin: .2rem 0 0;
+  color: #F3D58C;
+}
+.cloth p { margin: 0; font-size: 1.05rem; color: #D9CEB4; }
+.cloth .status {
+  margin-top: auto;
+  padding-top: .8rem;
+  font-size: .95rem;
+  color: #8FD6FF;
+}
+
+/* Halls that are open (links) lift slightly when pointed at */
+a.cloth { transition: transform .2s ease; }
+a.cloth:hover, a.cloth:focus-visible { transform: translateY(-4px); }
+
+/* One moment of motion: the banners unfurl when the page opens */
+@keyframes unfurl {
+  from { transform: scaleY(.05); opacity: 0; }
+  to   { transform: scaleY(1);   opacity: 1; }
+}
+.hall .cloth { animation: unfurl .7s cubic-bezier(.2, .8, .2, 1) both; }
+.hall:nth-child(2) .cloth { animation-delay: .12s; }
+.hall:nth-child(3) .cloth { animation-delay: .24s; }
+.hall:nth-child(4) .cloth { animation-delay: .36s; }
+@media (prefers-reduced-motion: reduce) {
+  .hall .cloth { animation: none; }
+  a.cloth { transition: none; }
+}
+
+/* [CSS-FOOTER] */
+footer {
+  margin-top: clamp(3.5rem, 9vw, 6rem);
+  padding: 2rem 0 2.5rem;
+  border-top: 1px solid var(--gold-soft);
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 1rem;
+}
+footer strong {
+  display: block;
+  font-family: "Cinzel", Georgia, serif;
+  color: var(--gold);
+  font-size: 1.1rem;
+  margin-bottom: .25rem;
+}
+</style>
+</head>
+<body>
+
+<main class="wrap">
+
+  <!-- [HTML-GATE] The Citadel picture. File must be named citadel.jpg -->
+  <div class="gate">
+    <img src="citadel.jpg" width="1199" height="1312"
+         alt="A castle on a hill above a great hall with bookshelves, a glowing blue globe, and banners for the Imperial Library, the Proving Grounds, the Forge and the Nexus.">
+  </div>
+
+  <header class="motto">
+    <h1>SolidMind Citadel</h1>
+    <p>Envision a Brighter Tomorrow.</p>
+    <div class="path" aria-label="Envision, Engineer, Create">
+      <span>Envision</span><span>Engineer</span><span>Create</span>
+    </div>
+  </header>
+
+  <h2 class="halls-title">Choose a hall</h2>
+  <p class="halls-sub">Every idea starts in the Library, gets tested in the Proving Grounds, and is built in the Forge.</p>
+
+  <!-- [HTML-HALLS]
+       Each hall is a <div class="cloth"> while it's closed.
+       To open a hall later: change <div class="cloth"> to <a class="cloth" href="library.html">
+       (and its closing </div> to </a>), then change the status line. -->
+  <ul class="halls">
+
+    <li class="hall">
+      <div class="cloth"><div class="cloth-inner">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M10 44h40v8H10zM14 36h38v8H14zM10 28h40v8H10z"/>
+          <path d="M16 31h20M20 39h24M16 47h22"/>
+        </svg>
+        <h3>The Imperial Library</h3>
+        <p>Learn how things work. Stories, puzzles and lessons that start every idea.</p>
+        <span class="status">Gates open soon</span>
+      </div></div>
+    </li>
+
+    <li class="hall">
+      <div class="cloth"><div class="cloth-inner">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M26 8h12M28 8v16L14 50a4 4 0 0 0 3.5 6h29a4 4 0 0 0 3.5-6L36 24V8"/>
+          <path d="M19 42h26"/>
+          <circle cx="28" cy="48" r="1.5"/><circle cx="36" cy="46" r="1.5"/>
+        </svg>
+        <h3>The Proving Grounds</h3>
+        <p>Test what you know. Challenges that show what works, and why.</p>
+        <span class="status">Gates open soon</span>
+      </div></div>
+    </li>
+
+    <li class="hall">
+      <div class="cloth"><div class="cloth-inner">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <path d="M8 22h34c0 6 6 10 14 10v4c-8 0-12 2-14 6H22c-2-4-6-6-10-6"/>
+          <path d="M8 22c0 6 2 10 4 14M26 42v8M38 42v8M20 54h24"/>
+        </svg>
+        <h3>The Forge</h3>
+        <p>Build something real. Games and projects you make work yourself.</p>
+        <span class="status">Gates open soon</span>
+      </div></div>
+    </li>
+
+    <li class="hall">
+      <div class="cloth"><div class="cloth-inner">
+        <svg viewBox="0 0 64 64" aria-hidden="true">
+          <circle cx="24" cy="38" r="9"/>
+          <path d="M24 23v4M24 49v4M9 38h4M35 38h4M13.4 27.4l2.8 2.8M31.8 45.8l2.8 2.8M13.4 48.6l2.8-2.8M31.8 30.2l2.8-2.8"/>
+          <circle cx="45" cy="19" r="6"/>
+          <path d="M45 9v3M45 26v3M35 19h3M52 19h3M38 12l2 2M50 24l2 2M38 26l2-2M50 14l2-2"/>
+        </svg>
+        <h3>The Nexus</h3>
+        <p>Where it all connects. Circuits, controllers and automation.</p>
+        <span class="status">Gates open soon</span>
+      </div></div>
+    </li>
+
+  </ul>
+</main>
+
+<!-- [HTML-FOOTER] -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+  </div>
+</footer>
+
+</body>
+</html>
