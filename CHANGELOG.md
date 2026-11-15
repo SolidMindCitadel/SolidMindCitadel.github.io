@@ -7,6 +7,31 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.2.1 – Privacy fix, working rules and preview labels – Nov 15, 2026
+
+**What was changed**
+- **Privacy fix:** removed the kids' ages from `CLAUDE.md`. "Who uses it" now says three kids
+  at different levels, from early elementary to middle school, and that the oldest is the
+  beta tester for the PLC games.
+- **Working rule** added to `CLAUDE.md`: Claude checks every change (privacy, correctness,
+  site still works) before handing it over, gives exact step-by-step instructions naming
+  each button and where it is, and asks when anything is unclear.
+- **Preview button labels** on the test page now match the real scores:
+  "Pretend pass (11 of 12, 91.7%)" and "Pretend fail (7 of 12, 58.3%)". They used to say
+  92% and 58%, which didn't match the result shown after tapping them.
+- Version number updated to v0.2.1 in every page footer.
+
+**Files changed**
+- `CLAUDE.md`, `CHANGELOG.md`, `test.html`, `citadel-core.js` (version number),
+  and the footer version in `index.html`, `heroes.html`, `hero.html`, `treasury.html`
+
+**Why**
+The site is public, so the kids' ages should not be in any file. The working rule makes
+sure every future change is fully checked before Ariet copies it. The labels were
+rounded, so they didn't match the score the page reported.
+
+---
+
 ## v0.2.0 – Hero profiles – Nov 15, 2026
 
 **What was added**
