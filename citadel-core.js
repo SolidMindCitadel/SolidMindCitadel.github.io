@@ -8,7 +8,7 @@
   (games in games/ will use "../citadel-core.js").
 
   Depends on: nothing. No frameworks, no server.
-  Used by:    heroes.html, hero.html, treasury.html, test.html
+  Used by:    heroes.html, hero.html, treasury.html, test.html, visitor.html
 
   Search these tags to jump to a section:
     [JS-VERSION]   the site version number
@@ -20,7 +20,12 @@
     [JS-TESTS]     the 14 tests, their rules, grading and coin amounts
     [JS-AREAS]     games report area scores; 90% mastery unlocks a locked test
     [JS-HEROES]    add, edit, remove and read heroes
-    [JS-COINS]     gold coins (games will call Citadel.addCoins)
+    [JS-COINS]     gold coins, coin history and per-game totals (the treasure chest)
+    [JS-CORRECT]   parent "Correct coins" from the Treasury
+    [JS-TROPHIES]  tier/rank badges and best scores (the trophy hall)
+    [JS-SETTINGS]  per-hero Sound and "Read words out loud"
+    [JS-VISITOR]   visitor mode: plays, but nothing is saved
+    [JS-BACKUP]    backup and restore (file or copied text)
     [JS-PIN]       Treasury PIN (a gate for kids, NOT real security)
     [JS-HALLS]     the four hall banners (shared drawing code)
     [JS-HELPERS]   small helpers for building the page
@@ -32,7 +37,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.2.1";
+  var VERSION = "0.3.0";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]
@@ -107,8 +112,26 @@
     if (!Array.isArray(h.test.weakAreas)) h.test.weakAreas = [];
     if (!Array.isArray(h.test.mastered)) h.test.mastered = [];
     if (!h.areas || typeof h.areas !== "object") h.areas = {};
+    // Added in v0.3.0. Heroes saved before then get these filled in once.
+    if (!Array.isArray(h.history)) {
+      h.history = [];
+      // Coins they already had get one entry so the history adds up.
+      if (h.coins > 0) h.history.push({ date: null, amount: h.coins, source: "earlier", label: "Coins from before the history began" });
+    }
+    if (!h.gameTotals || typeof h.gameTotals !== "object") h.gameTotals = {};
+    if (!Array.isArray(h.trophies)) {
+      h.trophies = [];
+      // A badge for every step already reached. Only the first has a known date.
+      for (var s = 0; s <= h.step; s++) h.trophies.push({ step: s, date: s === 0 ? (h.created || null) : null });
+    }
+    if (!h.bestScores || typeof h.bestScores !== "object") h.bestScores = {};
+    if (!h.settings || typeof h.settings !== "object") h.settings = {};
+    if (typeof h.settings.sound !== "boolean") h.settings.sound = DEFAULT_SETTINGS.sound;
+    if (typeof h.settings.readAloud !== "boolean") h.settings.readAloud = DEFAULT_SETTINGS.readAloud;
     return h;
   }
+
+  function today() { return new Date().toISOString().slice(0, 10); }
 
   /* ---------------------------------------------------------------
      [JS-CRESTS] Pictures a hero can wear on their shield.
@@ -301,6 +324,7 @@
      It applies rules 2-5 and saves. Returns { result, outcome, hero }
      outcome: "passed", "failed-once" or "locked". */
   function finishTest(heroId, answers) {
+    if (heroId === VISITOR_ID) throw new Error("Visitors can't take rank tests.");
     var data = load();
     var i = findById(data.heroes, heroId);
     if (i < 0) throw new Error("That hero is no longer here.");
@@ -312,9 +336,12 @@
     if (result.passed) {
       hero.step += 1;               // up one tier; coins are kept
       hero.test = freshTest();
+      hero.trophies.push({ step: hero.step, date: today() }); // new badge in the trophy hall
       outcome = "passed";
     } else {
-      hero.coins = Math.max(0, hero.coins - Math.floor(cost / 2));
+      var lost = Math.min(hero.coins, Math.floor(cost / 2));
+      hero.coins -= lost;
+      if (lost > 0) logCoins(hero, -lost, "test-fail", "Test not passed: " + testInfo(hero.step).name);
       if (hero.test.fails === 0) {
         hero.test.fails = 1;
         outcome = "failed-once";
@@ -339,6 +366,7 @@
     area = String(area || "");
     percent = Number(percent);
     if (!area || !(percent >= 0 && percent <= 100)) return getHero(heroId);
+    if (heroId === VISITOR_ID) return visitorHero(); // visitors: nothing kept
     var data = load();
     var i = findById(data.heroes, heroId);
     if (i < 0) return null;
@@ -361,7 +389,12 @@
        { id, nickname, crest, color, level, coins, earned, created,
          step,   // place on the rank ladder, 0-14 (see [JS-RANKS])
          test,   // where they stand on their next test (see [JS-TESTS])
-         areas } // best/last score per area, reported by games ([JS-AREAS])
+         areas,      // best/last score per area, reported by games ([JS-AREAS])
+         history,    // coin history, newest last ([JS-COINS])
+         gameTotals, // coins earned per game ([JS-COINS])
+         trophies,   // [{step, date}] one per tier/rank reached ([JS-TROPHIES])
+         bestScores, // best score per game ([JS-TROPHIES])
+         settings }  // { sound, readAloud } ([JS-SETTINGS])
      Nicknames only. Never real names (the site is public, and the
      Treasury reminds the parent of this).
      --------------------------------------------------------------- */
@@ -399,6 +432,7 @@
   function getHeroes() { return load().heroes; }
 
   function getHero(id) {
+    if (id === VISITOR_ID) return visitorHero();
     var heroes = load().heroes;
     var i = findById(heroes, id);
     return i < 0 ? null : heroes[i];
@@ -419,7 +453,12 @@
       created: new Date().toISOString().slice(0, 10),
       step: 0,    // Apprentice Bronze
       test: freshTest(),
-      areas: {}
+      areas: {},
+      history: [],
+      gameTotals: {},
+      trophies: [{ step: 0, date: today() }], // Apprentice – Bronze from day one
+      bestScores: {},
+      settings: { sound: DEFAULT_SETTINGS.sound, readAloud: DEFAULT_SETTINGS.readAloud }
     };
     data.heroes.push(hero);
     save(data);
@@ -452,20 +491,277 @@
   }
 
   /* ---------------------------------------------------------------
-     [JS-COINS] Games call Citadel.addCoins(heroId, amount) when a
-     hero finishes something. Only whole, positive amounts count.
+     [JS-COINS] The treasure chest.
+     Games call:
+         Citadel.addCoins(heroId, amount, { game: "times-trials", label: "Times Trials" })
+     when a hero earns coins. Only whole, positive amounts count.
+     Every change of coins is written to hero.history so the hero can
+     see where each coin came from. Sources:
+       "game"       earned in a game (also added to hero.gameTotals)
+       "test-fail"  lost half a test's coin amount
+       "correction" a parent fixed a mistake in the Treasury
+       "preview"    parent preview buttons on test.html (for trying things out)
+       "earlier"    coins a hero had before v0.3.0 started the history
+     The history keeps the newest HISTORY_MAX entries so the saved data
+     stays small; the per-game totals are never trimmed.
      Returns the updated hero (or null if the hero is gone).
      --------------------------------------------------------------- */
-  function addCoins(id, amount) {
+  var HISTORY_MAX = 300;
+
+  function logCoins(hero, amount, source, label, note) {
+    var entry = { date: today(), amount: amount, source: source, label: label };
+    if (note) entry.note = note;
+    hero.history.push(entry);
+    if (hero.history.length > HISTORY_MAX) hero.history.splice(0, hero.history.length - HISTORY_MAX);
+  }
+
+  function addCoins(id, amount, from) {
     amount = Math.floor(Number(amount));
     if (!(amount > 0)) return getHero(id);
+    from = from || {};
+    var isPreview = from.preview === true;
+    var gameId = String(from.game || "game");
+    var gameLabel = String(from.label || from.game || "A game");
+    // Visitors: coins show while they play, but are never saved.
+    if (id === VISITOR_ID) { visitorHero().coins += amount; return visitorHero(); }
     var data = load();
     var i = findById(data.heroes, id);
     if (i < 0) return null;
-    data.heroes[i].coins += amount;
-    data.heroes[i].earned += amount;
+    var hero = data.heroes[i];
+    hero.coins += amount;
+    hero.earned += amount;
+    if (isPreview) {
+      logCoins(hero, amount, "preview", "Parent preview (testing)");
+    } else {
+      logCoins(hero, amount, "game", gameLabel);
+      var t = hero.gameTotals[gameId] || { label: gameLabel, coins: 0 };
+      t.label = gameLabel;
+      t.coins += amount;
+      hero.gameTotals[gameId] = t;
+    }
     save(data);
-    return data.heroes[i];
+    return hero;
+  }
+
+  // Newest first, for the treasure chest.
+  function coinHistory(hero) { return (hero.history || []).slice().reverse(); }
+
+  // [{id, label, coins}] biggest first.
+  function gameTotals(hero) {
+    var out = [];
+    for (var k in hero.gameTotals) {
+      if (Object.prototype.hasOwnProperty.call(hero.gameTotals, k)) {
+        out.push({ id: k, label: hero.gameTotals[k].label, coins: hero.gameTotals[k].coins });
+      }
+    }
+    return out.sort(function (a, b) { return b.coins - a.coins; });
+  }
+
+  /* [JS-CORRECT] Parent-only, from the Treasury: fix a mistake in a
+     hero's coins (plus or minus) with a reason. This is NOT a reward:
+     parent rewards will be gold dust in a later version (see CLAUDE.md
+     "Planned"). Coins never go below 0. Corrections don't change
+     per-game totals or "earned". */
+  function correctCoins(id, amount, reason) {
+    amount = Math.trunc(Number(amount));
+    reason = String(reason == null ? "" : reason).replace(/\s+/g, " ").trim().slice(0, 80);
+    if (!amount || !isFinite(amount)) throw new Error("Type how many coins to add (like 5) or take away (like -5).");
+    if (Math.abs(amount) > 99999) throw new Error("That number is too big.");
+    if (!reason) throw new Error("Please write a short reason for the correction.");
+    var data = load();
+    var i = findById(data.heroes, id);
+    if (i < 0) throw new Error("That hero is no longer here.");
+    var hero = data.heroes[i];
+    var change = amount < 0 ? -Math.min(hero.coins, -amount) : amount;
+    if (change === 0) throw new Error(hero.nickname + " has no coins to take away.");
+    hero.coins += change;
+    logCoins(hero, change, "correction", "Correction", reason);
+    save(data);
+    return { hero: hero, change: change };
+  }
+
+  /* ---------------------------------------------------------------
+     [JS-TROPHIES] The trophy hall.
+     Badges: one for every tier and rank reached, with the date. Added
+     automatically when a test is passed (see finishTest). Badges for
+     steps reached before v0.3.0 have no date ("Earlier").
+     Best scores: games call
+         Citadel.recordBestScore(heroId, { game: "times-trials",
+           label: "Times Trials", score: 42, text: "42 correct in 60 s",
+           lowerIsBetter: false })
+     and the best one per game is kept, with its date. "text" is how
+     the score is shown; each game decides what it says.
+     Returns true if this was a new best.
+     --------------------------------------------------------------- */
+  function trophies(hero) {
+    return (hero.trophies || []).slice().sort(function (a, b) { return b.step - a.step; })
+      .map(function (t) { var info = stepInfo(t.step); info.date = t.date; return info; });
+  }
+
+  function recordBestScore(id, r) {
+    r = r || {};
+    var score = Number(r.score);
+    if (!r.game || !isFinite(score)) return false;
+    var game = String(r.game);
+    var target = id === VISITOR_ID ? visitorHero() : null;
+    var data = target ? null : load();
+    if (!target) {
+      var i = findById(data.heroes, id);
+      if (i < 0) return false;
+      target = data.heroes[i];
+    }
+    var prev = target.bestScores[game];
+    var better = !prev || (r.lowerIsBetter ? score < prev.score : score > prev.score);
+    if (better) {
+      target.bestScores[game] = { label: String(r.label || game), score: score,
+        text: String(r.text || score), lowerIsBetter: !!r.lowerIsBetter, date: today() };
+      if (data) save(data);
+    }
+    return better;
+  }
+
+  function bestScores(hero) {
+    var out = [];
+    for (var k in hero.bestScores) {
+      if (Object.prototype.hasOwnProperty.call(hero.bestScores, k)) {
+        var b = hero.bestScores[k];
+        out.push({ id: k, label: b.label, score: b.score, text: b.text, date: b.date });
+      }
+    }
+    return out.sort(function (a, b) { return a.label.localeCompare(b.label); });
+  }
+
+  /* ---------------------------------------------------------------
+     [JS-SETTINGS] Each hero's own settings, changed on their page.
+       sound      games play sounds only when this is on
+       readAloud  games read words out loud (browser speech) when on
+     Games use Citadel.getSettings(heroId), Citadel.playSound(heroId, kind)
+     and Citadel.speak(heroId, text). Both helpers already check the
+     setting, so a game can call them without checking first.
+     --------------------------------------------------------------- */
+  var DEFAULT_SETTINGS = { sound: true, readAloud: false };
+
+  function getSettings(id) {
+    var hero = getHero(id);
+    var s = hero ? hero.settings : DEFAULT_SETTINGS;
+    return { sound: s.sound, readAloud: s.readAloud };
+  }
+
+  function setSetting(id, name, value) {
+    if (name !== "sound" && name !== "readAloud") return;
+    if (id === VISITOR_ID) { visitorHero().settings[name] = !!value; return; }
+    var data = load();
+    var i = findById(data.heroes, id);
+    if (i < 0) return;
+    data.heroes[i].settings[name] = !!value;
+    save(data);
+  }
+
+  // Can this browser speak at all? (Most phones and computers can.)
+  function canSpeak() {
+    try { return "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance === "function"; }
+    catch (e) { return false; }
+  }
+
+  function speak(id, text) {
+    if (!getSettings(id).readAloud || !canSpeak() || !text) return false;
+    try {
+      window.speechSynthesis.cancel(); // stop anything still talking
+      var u = new window.SpeechSynthesisUtterance(String(text));
+      u.rate = 0.9; // a little slower, easier for young readers
+      window.speechSynthesis.speak(u);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  // Short built-in sounds made by the browser (no sound files needed).
+  // kind: "coin", "right", "wrong" or "tap".
+  var audioCtx = null;
+  function playSound(id, kind) {
+    if (!getSettings(id).sound) return false;
+    try {
+      var AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return false;
+      audioCtx = audioCtx || new AC();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+      var notes = { coin: [988, 1319], right: [660, 880], wrong: [330, 220], tap: [600] }[kind] || [600];
+      var t = audioCtx.currentTime;
+      notes.forEach(function (f, n) {
+        var osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+        osc.type = "triangle";
+        osc.frequency.value = f;
+        gain.gain.setValueAtTime(0.0001, t + n * 0.11);
+        gain.gain.exponentialRampToValueAtTime(0.2, t + n * 0.11 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + n * 0.11 + 0.16);
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        osc.start(t + n * 0.11); osc.stop(t + n * 0.11 + 0.18);
+      });
+      return true;
+    } catch (e) { return false; }
+  }
+
+  /* ---------------------------------------------------------------
+     [JS-VISITOR] Visitor mode, for friends.
+     A visitor is a pretend hero that lives only in this page's memory:
+     getHero("visitor") returns it, and games can treat it like any
+     hero. But nothing about it is ever saved: coins disappear when the
+     page closes or changes, it never shows up in the Treasury, and it
+     can't take rank tests (finishTest refuses).
+     Pages for visitors use "?id=visitor" in the address.
+     --------------------------------------------------------------- */
+  var VISITOR_ID = "visitor";
+  var visitorMemory = null;
+  function visitorHero() {
+    if (!visitorMemory) {
+      visitorMemory = fillHero({ id: VISITOR_ID, nickname: "Visitor", crest: "star", color: "slate",
+        level: 1, coins: 0, earned: 0, created: today(), step: 0, visitor: true,
+        history: [], trophies: [], settings: { sound: DEFAULT_SETTINGS.sound, readAloud: DEFAULT_SETTINGS.readAloud } });
+    }
+    return visitorMemory;
+  }
+  function isVisitor(id) { return id === VISITOR_ID; }
+
+  /* ---------------------------------------------------------------
+     [JS-BACKUP] Backup and restore (Treasury only, behind the PIN).
+     A backup is plain text (JSON) holding EVERYTHING saved on this
+     device: heroes, coins, coin history, ranks, tests, trophies,
+     settings, the test coin amounts and the PIN (scrambled).
+     Restoring REPLACES everything on this device with the backup.
+     Backups hold the kids' nicknames: keep them on your own devices
+     and never upload one to the GitHub repository (it is public).
+     --------------------------------------------------------------- */
+  var BACKUP_APP = "solidmind-citadel-backup";
+
+  function makeBackup() {
+    return JSON.stringify({ app: BACKUP_APP, siteVersion: VERSION, made: new Date().toISOString(), data: load() }, null, 1);
+  }
+
+  // Checks a backup without changing anything. Returns { heroes, made } or throws.
+  function readBackup(text) {
+    var b;
+    try { b = JSON.parse(String(text || "").trim()); }
+    catch (e) { throw new Error("That doesn't look like a Citadel backup. Check that all of the text was copied."); }
+    if (!b || b.app !== BACKUP_APP || !b.data || !Array.isArray(b.data.heroes)) {
+      throw new Error("That doesn't look like a Citadel backup.");
+    }
+    var d = b.data;
+    d.heroes.forEach(function (h) {
+      if (!h || typeof h.id !== "string" || typeof h.nickname !== "string") throw new Error("This backup is damaged (a hero is missing details).");
+      fillHero(h);
+      h.nickname = cleanNickname(h.nickname) || "Hero";
+      h.step = Math.max(0, Math.min(TOP_STEP, Math.floor(h.step) || 0));
+      h.coins = Math.max(0, Math.floor(h.coins) || 0);
+    });
+    if (!Array.isArray(d.testCoins) || d.testCoins.length !== DEFAULT_TEST_COINS.length) d.testCoins = DEFAULT_TEST_COINS.slice();
+    if (typeof d.pin !== "string") d.pin = null;
+    d.schema = SCHEMA;
+    return { data: d, heroes: d.heroes.length, made: b.made || null, siteVersion: b.siteVersion || "" };
+  }
+
+  // Replaces everything on this device with the backup. Returns true if it could be saved.
+  function restoreBackup(text) {
+    var r = readBackup(text);
+    return save({ schema: SCHEMA, heroes: r.data.heroes, pin: r.data.pin, testCoins: r.data.testCoins });
   }
 
   /* ---------------------------------------------------------------
@@ -502,6 +798,7 @@
   // kid can't use it to quietly change their own level.
   function resetEverything() {
     memoryCopy = null;
+    visitorMemory = null;
     try { window.localStorage.removeItem(STORE_KEY); } catch (e) { /* blocked: nothing saved anyway */ }
   }
 
@@ -633,6 +930,11 @@
     testStatus: testStatus, testStatusText: testStatusText, canTakeTest: canTakeTest,
     newGamesAllowed: newGamesAllowed, gradeTest: gradeTest, finishTest: finishTest,
     reportAreaScore: reportAreaScore,
+    coinHistory: coinHistory, gameTotals: gameTotals, correctCoins: correctCoins,
+    trophies: trophies, recordBestScore: recordBestScore, bestScores: bestScores,
+    getSettings: getSettings, setSetting: setSetting, canSpeak: canSpeak, speak: speak, playSound: playSound,
+    VISITOR_ID: VISITOR_ID, isVisitor: isVisitor,
+    makeBackup: makeBackup, readBackup: readBackup, restoreBackup: restoreBackup,
     hasPin: hasPin, setPin: setPin, checkPin: checkPin, validPin: validPin,
     resetEverything: resetEverything,
     el: el, crestSvg: crestSvg, renderHalls: renderHalls

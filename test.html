@@ -109,7 +109,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.2.1</span>
+    <span class="version">v0.3.0</span>
   </div>
 </footer>
 
@@ -120,6 +120,7 @@
   function $(id) { return document.getElementById(id); }
   var id = new URLSearchParams(location.search).get("id");
   C.showStorageNotice($("main"));
+  if (C.isVisitor(id)) { location.replace("visitor.html"); return; } // visitors can't take rank tests
   if (!id || !C.getHero(id)) { $("not-found").hidden = false; return; }
   $("back-link").href = "hero.html?id=" + encodeURIComponent(id);
 
@@ -205,7 +206,7 @@
   }
   $("pv-pass").addEventListener("click", function () { take(answers(4, 3)); });   // 11 of 12 right
   $("pv-fail").addEventListener("click", function () { take(answers(1, 2)); });   // 7 of 12 right
-  $("pv-coins").addEventListener("click", function () { C.addCoins(id, 10); say("Added 10 coins."); draw(); });
+  $("pv-coins").addEventListener("click", function () { C.addCoins(id, 10, { preview: true }); say("Added 10 coins (shows as \u201cParent preview\u201d in the coin history)."); draw(); });
 
   $("preview-unlock").addEventListener("submit", function (e) {
     e.preventDefault();

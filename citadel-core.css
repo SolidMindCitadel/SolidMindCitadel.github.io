@@ -7,7 +7,7 @@
   still looks right even on its own.)
 
   Depends on: Google Fonts Cinzel + Alegreya Sans (linked in each page).
-  Used by:    heroes.html, hero.html, treasury.html, test.html
+  Used by:    heroes.html, hero.html, treasury.html, test.html, visitor.html
 
   Search these tags to jump to a section:
     [CSS-COLORS]   night and daylight color sets (same as index.html)
@@ -18,6 +18,7 @@
     [CSS-HOME]     a hero's home page: coins, rank, level
     [CSS-RANK]     bronze / silver / gold rank badge
     [CSS-TEST]     next-test box, test page, Treasury coin table
+    [CSS-CHEST]    treasure chest, trophy hall, settings switches
     [CSS-FORMS]    Treasury forms, crest and color pickers
     [CSS-BANNERS]  the four hall banners
     [CSS-NOTICE]   warning and "saved on this device" notes
@@ -207,6 +208,50 @@ a.hero-card:hover, a.hero-card:focus-visible { transform: translateY(-4px); bord
   background: var(--sky); border: 2px solid var(--gold-soft); border-radius: 8px; }
 .promo { color: var(--arcane); font-size: .9rem; font-weight: 700; }
 
+/* [CSS-CHEST] Treasure chest, trophy hall and settings on a hero's page */
+.panel h2 .coin { margin-right: .5rem; }
+.sub-title { font-size: 1.05rem; margin: 1.25rem 0 .5rem; }
+.sub-title .hint { font-family: "Alegreya Sans", sans-serif; font-weight: 400; }
+.totals, .history, .badges { list-style: none; padding: 0; margin: 0; }
+.totals li, .history li {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: .25rem 1rem;
+  padding: .55rem .25rem; border-bottom: 1px solid var(--gold-soft);
+}
+.totals li > :first-child, .history .what { flex: 1 1 10rem; overflow-wrap: anywhere; }
+.history .when { flex: 0 0 auto; min-width: 6.5rem; color: var(--text-dim); font-size: .95rem; }
+.history .plus { color: var(--arcane); }
+.history .minus { color: var(--danger); }
+.badges { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 150px), 1fr)); }
+.badge {
+  display: flex; flex-direction: column; align-items: center; gap: .3rem; text-align: center;
+  padding: .9rem .5rem; background: var(--sky); border: 1px solid var(--gold-soft); border-radius: 12px;
+}
+.badge-name { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: .95rem; }
+.medal.big { width: 2.4rem; height: 2.4rem; }
+.switch {
+  display: flex; align-items: center; gap: .75rem; min-height: 48px; margin: .25rem 0;
+  font-weight: 700; cursor: pointer;
+}
+.switch input {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; cursor: pointer;
+  width: 3.4rem; height: 2rem; border-radius: 99px; position: relative;
+  background: var(--sky); border: 2px solid var(--gold-soft); transition: background .2s ease;
+}
+.switch input::after {
+  content: ""; position: absolute; top: 3px; left: 3px; width: 1.4rem; height: 1.4rem; border-radius: 50%;
+  background: var(--text-dim); transition: transform .2s ease;
+}
+.switch input:checked { background: var(--arcane); border-color: var(--arcane); }
+.switch input:checked::after { transform: translateX(1.4rem); background: #fff; }
+.backup-text { width: 100%; min-height: 8rem; font: .85rem/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--text); background: var(--sky); border: 2px solid var(--gold-soft); border-radius: 10px; padding: .6rem; }
+.warning-box { margin: 1rem 0 0; padding: .8rem 1rem; border-radius: 12px; border: 2px solid var(--danger); background: var(--sky); }
+.visitor-crest { font-size: 3.5rem; line-height: 1; }
+
+/* Treasury "Correct coins" box inside a hero row */
+.roster details.correct { grid-column: 1 / -1; }
+.roster details.correct summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--gold); font-weight: 700; }
+
 /* [CSS-FORMS] Treasury */
 .panel {
   background: var(--stone); border: 1px solid var(--gold-soft); border-radius: 16px;
@@ -296,7 +341,7 @@ a.cloth:hover, a.cloth:focus-visible { transform: translateY(-4px); }
 /* Respect "reduce motion" on the device */
 @media (prefers-reduced-motion: reduce) {
   .hall .cloth { animation: none; }
-  a.cloth, .hero-card { transition: none; }
+  a.cloth, .hero-card, .switch input, .switch input::after { transition: none; }
   a.cloth:hover, a.hero-card:hover { transform: none; }
 }
 
