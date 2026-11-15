@@ -30,6 +30,7 @@
     [JS-ROSTER]     draws the hero list
     [JS-TESTS]      the test coin table (save / back to starting numbers)
     [JS-CORRECT]    "Correct coins" box for each hero
+    [JS-NEXUS]      "Nexus access" switch for each hero (off by default)
     [JS-BACKUP]     download / copy a backup, restore from a file or text
     [JS-FORM]       add / edit hero form
     [JS-PINS]       create, check and change the PIN; reset
@@ -46,7 +47,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="citadel-core.css">
+<!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
+<link rel="stylesheet" href="citadel-core.css?v=0.5.0">
 </head>
 <body>
 
@@ -216,11 +218,11 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.4.0</span>
+    <span class="version">v0.5.0</span>
   </div>
 </footer>
 
-<script src="citadel-core.js"></script>
+<script src="citadel-core.js?v=0.5.0"></script>
 <script>
 (function () {
   var C = window.Citadel, el = C.el;
@@ -309,6 +311,7 @@
             "aria-label": "Edit " + hero.nickname, onclick: function () { editHero(hero.id); } }),
           el("button", { class: "btn danger small", type: "button", text: "Remove",
             "aria-label": "Remove " + hero.nickname, onclick: function () { removeHero(hero); } })),
+        nexusSwitch(hero),
         correctBox(hero)));
     });
   }
@@ -333,6 +336,18 @@
             alertOk(hero.nickname + ": " + (r.change > 0 ? "+" : "") + r.change + " coins (correction). Now " + r.hero.coins + " coins.");
           } catch (e) { err.textContent = e.message; }
         } })));
+  }
+
+  /* [JS-NEXUS] "Nexus access" switch, off by default. Only heroes with it on
+     see the Nexus banner on their page and can enter nexus.html. */
+  function nexusSwitch(hero) {
+    var box = el("input", { type: "checkbox", role: "switch", checked: hero.nexusAccess,
+      onchange: function () {
+        C.updateHero(hero.id, { nexusAccess: box.checked });
+        alertOk(hero.nickname + (box.checked ? " can now enter the Nexus." : " can no longer see the Nexus."));
+      } });
+    return el("label", { class: "switch nexus-switch" }, box,
+      el("span", null, "Nexus access ", el("span", { class: "hint", text: "(PLC course games)" })));
   }
 
   // Skill grades from games: average of the last 10 answers, star when mastered.

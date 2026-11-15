@@ -7,6 +7,43 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.5.0 – The Nexus, Ladder Race and game rules – Nov 15, 2026
+
+**What was added**
+- **The Nexus is open, for chosen heroes only.** The new hall page `nexus.html` lists Ladder Race.
+  Each hero has a **"Nexus access"** switch in the Treasury (off by default). Only heroes with it
+  on see the Nexus banner on their page; for others it doesn't appear at all, and visitors never
+  see it. The Nexus banner on the main page stays closed.
+- **Ladder Race** (`nexus/ladder-race.html`): Ariet's game from his PLC course, kept exactly as
+  he made it. The only additions are a "Back to the Nexus" button and the version footer. It is a
+  standalone game, not part of the Citadel's learning system: no coins, skills or trophies.
+- **Reusable race board** (`citadel-race.js`): Ladder Race's gameplay (30-square board, dice,
+  ladders and slides, 3 tries, a wrong answer costs a square, the computer's move and skill
+  dice and wild card, questions that adapt), ready for future Citadel games in any subject to
+  use with their own questions. No game uses it yet.
+- **Fix: newest files after every update.** Every page now loads shared files with the version
+  in the address (for example `citadel-core.js?v=0.5.0`), so phones no longer keep an old copy
+  (like the hero page that still showed the Proving Grounds as "Gates open soon").
+- **Fix: back to the hall after choosing a hero.** If you open the Proving Grounds (or the Nexus)
+  before choosing a hero, choosing one now takes you straight to that hall's games.
+- `CLAUDE.md`:
+  - **New:** the "How every game teaches" rules, the Ladder Race exception, the Nexus access
+    rules, how to update `?v=` with each version, the race board, and a planned "Story
+    lessons (Imperial Library)" section.
+  - **Hidden quests:** these will use Ladder Race's dice rules.
+
+**Files changed**
+- New: `nexus.html`, `nexus/ladder-race.html`, `citadel-race.js`
+- Changed: `citadel-core.js`, `citadel-core.css`, `heroes.html`, `treasury.html`,
+  `proving-grounds.html`, `games/pizza-party.html`, and the `?v=` links and footer version on
+  every page (`index.html`, `hero.html`, `visitor.html`, `test.html`), `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+To give the PLC beta tester a space of their own for Ariet's PLC games, to set the rules every future
+game follows, and to fix two problems found after v0.4.0.
+
+---
+
 ## v0.4.0 – Pizza Party – Nov 15, 2026
 
 **What was added**

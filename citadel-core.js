@@ -30,6 +30,8 @@
     [JS-BACKUP]    backup and restore (file or copied text)
     [JS-PIN]       Treasury PIN (a gate for kids, NOT real security)
     [JS-HALLS]     the four hall banners (shared drawing code)
+    [JS-NEXUS]     "Nexus access": which heroes may see the Nexus
+    [JS-NEXT]      after choosing a hero, go back to the hall they came from
     [JS-HELPERS]   small helpers for building the page
 
   Privacy: nothing here leaves the device. Heroes are saved in this
@@ -39,7 +41,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.4.0";
+  var VERSION = "0.5.0";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]
@@ -128,6 +130,7 @@
     }
     if (!h.bestScores || typeof h.bestScores !== "object") h.bestScores = {};
     if (!h.games || typeof h.games !== "object") h.games = {}; // added in v0.4.0
+    if (typeof h.nexusAccess !== "boolean") h.nexusAccess = false; // added in v0.5.0, off by default
     if (!h.settings || typeof h.settings !== "object") h.settings = {};
     if (typeof h.settings.sound !== "boolean") h.settings.sound = DEFAULT_SETTINGS.sound;
     if (typeof h.settings.readAloud !== "boolean") h.settings.readAloud = DEFAULT_SETTINGS.readAloud;
@@ -558,6 +561,7 @@
       test: freshTest(),
       areas: {},
       games: {},
+      nexusAccess: false, // the parent turns this on in the Treasury
       history: [],
       gameTotals: {},
       trophies: [{ step: 0, date: today() }], // Apprentice – Bronze from day one
@@ -584,6 +588,7 @@
     if ("crest" in changes) hero.crest = pick(CRESTS, changes.crest).id;
     if ("color" in changes) hero.color = pick(COLORS, changes.color).id;
     if ("level" in changes && LEVELS.indexOf(Number(changes.level)) >= 0) hero.level = Number(changes.level);
+    if ("nexusAccess" in changes) hero.nexusAccess = changes.nexusAccess === true;
     save(data);
     return hero;
   }
@@ -987,6 +992,9 @@
      When a hall opens, put its page name here (e.g. "library.html")
      and every hero page will link to it. Never link a page that
      doesn't exist yet.
+     needsNexusAccess: the banner is drawn only for heroes whose
+     "Nexus access" is on (see [JS-NEXUS]); for everyone else, and for
+     visitors, it is left out completely, not shown as closed.
      --------------------------------------------------------------- */
   var HALLS = [
     { name: "The Imperial Library", href: null,
@@ -998,7 +1006,7 @@
     { name: "The Forge", href: null,
       text: "Build something real. Games and projects you make work yourself.",
       icon: '<path d="M8 22h34c0 6 6 10 14 10v4c-8 0-12 2-14 6H22c-2-4-6-6-10-6"/><path d="M8 22c0 6 2 10 4 14M26 42v8M38 42v8M20 54h24"/>' },
-    { name: "The Nexus", href: null,
+    { name: "The Nexus", href: "nexus.html", needsNexusAccess: true,
       text: "Where it all connects. Circuits, controllers and automation.",
       icon: '<circle cx="24" cy="38" r="9"/><path d="M24 23v4M24 49v4M9 38h4M35 38h4M13.4 27.4l2.8 2.8M31.8 45.8l2.8 2.8M13.4 48.6l2.8-2.8M31.8 30.2l2.8-2.8"/><circle cx="45" cy="19" r="6"/><path d="M45 9v3M45 26v3M35 19h3M52 19h3M38 12l2 2M50 24l2 2M38 26l2-2M50 14l2-2"/>' }
   ];
@@ -1009,6 +1017,7 @@
   function renderHalls(list, heroId) {
     list.textContent = "";
     HALLS.forEach(function (hall) {
+      if (hall.needsNexusAccess && !hasNexusAccess(heroId)) return; // hidden, not "closed"
       var svg = document.createElementNS(SVG_NS, "svg");
       svg.setAttribute("viewBox", "0 0 64 64");
       svg.setAttribute("aria-hidden", "true");
@@ -1021,6 +1030,26 @@
       var cloth = href ? el("a", { class: "cloth", href: href }, inner) : el("div", { class: "cloth" }, inner);
       list.appendChild(el("li", { class: "hall" }, cloth));
     });
+  }
+
+  /* [JS-NEXUS] The Nexus holds Ariet's PLC course games. A parent turns
+     "Nexus access" on per hero in the Treasury (off by default). Visitors
+     never have it. Like the PIN, this is a gate for kids, not security:
+     the pages are public. */
+  function hasNexusAccess(heroId) {
+    if (!heroId || heroId === VISITOR_ID) return false;
+    var hero = getHero(heroId);
+    return !!(hero && hero.nexusAccess);
+  }
+
+  /* [JS-NEXT] When someone opens a hall (or a game) before choosing a
+     hero, they go to heroes.html?next=<hall>. After they tap a hero, they
+     land back in that hall's games instead of the hero page. Only the halls
+     listed here are allowed, so the address can't send anyone elsewhere. */
+  var NEXT_PAGES = { "proving-grounds": "proving-grounds.html", "nexus": "nexus.html" };
+  function nextPage(name, heroId) {
+    var page = NEXT_PAGES[name];
+    return page ? page + "?id=" + encodeURIComponent(heroId) : null;
   }
 
   // Everything other pages can use, under one name: Citadel
@@ -1039,6 +1068,7 @@
     newGamesAllowed: newGamesAllowed, gradeTest: gradeTest, finishTest: finishTest,
     reportAreaScore: reportAreaScore, reportAnswer: reportAnswer, skillGrades: skillGrades,
     STARTER_GAMES: STARTER_GAMES.slice(), canPlayGame: canPlayGame,
+    hasNexusAccess: hasNexusAccess, nextPage: nextPage, NEXT_PAGES: NEXT_PAGES,
     getGameData: getGameData, setGameData: setGameData,
     coinHistory: coinHistory, gameTotals: gameTotals, correctCoins: correctCoins,
     trophies: trophies, recordBestScore: recordBestScore, bestScores: bestScores,

@@ -50,7 +50,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../citadel-core.css">
+<!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
+<link rel="stylesheet" href="../citadel-core.css?v=0.5.0">
 <style>
 /* [CSS-GAME] Bright and friendly, with very big tap targets */
 .game { max-width: 720px; margin: 0 auto; }
@@ -176,7 +177,7 @@
   <div class="empty" id="no-player" hidden>
     <p><strong>Who's playing?</strong></p>
     <p>Choose your hero first, or play as a visitor.</p>
-    <div class="btn-row"><a class="btn" href="../heroes.html">Choose a hero</a><a class="btn ghost" href="../visitor.html">Play as a visitor</a></div>
+    <div class="btn-row"><a class="btn" href="../heroes.html?next=proving-grounds">Choose a hero</a><a class="btn ghost" href="pizza-party.html?id=visitor">Play as a visitor</a></div>
   </div>
 </main>
 
@@ -185,13 +186,13 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.4.0</span>
+    <span class="version">v0.5.0</span>
   </div>
 </footer>
 
-<script src="../citadel-core.js"></script>
-<script src="../citadel-questions.js"></script>
-<script src="pizza-party-questions.js"></script>
+<script src="../citadel-core.js?v=0.5.0"></script>
+<script src="../citadel-questions.js?v=0.5.0"></script>
+<script src="pizza-party-questions.js?v=0.5.0"></script>
 <script>
 (function () {
   "use strict";

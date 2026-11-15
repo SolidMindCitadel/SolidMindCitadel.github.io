@@ -58,7 +58,7 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 2. **First games:** 3–4 games, one or two per hall, all using `citadel-core.js`.
 3. **The Nexus:** PLC games. Ariet will upload the existing files (PLC trainer
    prototype, ladder editor, and a "snake and ladder" PLC game). Do not invent or
-   rebuild these from guesses; ask for the files.
+   rebuild these from guesses; ask for the files. (Opened in v0.5.0 with Ladder Race.)
 
 ## Keep it easy to separate later
 
@@ -97,6 +97,22 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   normally open contact. An E-stop is hardwired and safety-rated; never present a
   PLC rung alone as an emergency stop.
 - Virtual controller I/O never exceeds 8 DI, 4 DO, 2 AI, 2 AO, 2 RTD.
+
+### The Nexus hall (built in v0.5.0)
+
+- `nexus.html?id=<heroId>` lists the Nexus games. Each hero has a **"Nexus access"** switch in
+  the Treasury, **off by default**. Only heroes with it on see the Nexus banner on their hero
+  page; for everyone else the banner is left out completely (not shown as closed). Visitors
+  never see or enter it. The Nexus banner on `index.html` stays closed, because that page is
+  not tied to a hero. Like the PIN, this is a gate for kids, not security.
+- **Ladder Race is an exception.** `nexus/ladder-race.html` is a standalone game from Ariet's
+  PLC training course, kept exactly as Ariet made it (same rules, levels, look, fonts and coil
+  names). It is NOT part of the Citadel's learning system: no coins, skill areas, mastery,
+  question bank or trophies, and the SolidMind PLC I/O and naming rules above don't apply to it.
+  The only Citadel additions are a back button to the Nexus and the version footer. Don't change
+  how it plays without asking Ariet first.
+- Its gameplay (not its PLC content) is the model for the reusable race board and for
+  "How every game teaches" below.
 
 ## Rank ladder and tests (permanent rules, built in v0.2.0)
 
@@ -159,6 +175,9 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   `games/<name>-questions.js`. Hall pages (e.g. `proving-grounds.html?id=...`) list their games in
   one `GAMES` line each. Copy `games/pizza-party.html` when building a new game.
 - **Levels:** a game uses the hero's level from the Treasury. Visitors pick a level.
+- **Choosing a hero from a hall:** a hall or game opened without a hero links "Choose a hero"
+  to `heroes.html?next=<hall>`, and the chosen hero lands straight back in that hall's games.
+  Each new hall must be added to `NEXT_PAGES` in `citadel-core.js` `[JS-NEXT]`.
 - **Starter games** (`Citadel.STARTER_GAMES`, now just `pizza-party`) are never blocked by rule 6.
   Other games check `Citadel.canPlayGame(heroId, gameId)`.
 - **Scoring (Ariet's rules):**
@@ -196,6 +215,39 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   - Level 3: Sharing with leftovers (`share-leftover`), Fractions of a pizza
     (`fraction-of-whole`), Comparing fractions (`compare-fractions`).
 
+## How every game teaches (permanent rules for all future games)
+
+Ladder Race is the model.
+- It must feel like a game, not schoolwork. The learning is the move: right answers power
+  progress (move, win, build); wrong answers cost a little progress, never a scolding.
+- Play against something: the computer, a rival or a timer.
+- After every answer, show visually why it was right (like the circuit lighting up green).
+- Difficulty adapts: a few right in a row gets harder, a couple wrong gets easier.
+- Variety: shuffle question types so they don't repeat.
+- Mix luck with skill so a struggling kid can still win sometimes.
+- Short rounds for Level 1 players.
+- Rotate themes between games (knights and princesses, space, dragons, pirates, kid-friendly
+  mysteries and others). Pizza was one example, not a rule.
+
+## Reusable race board (built in v0.5.0, `citadel-race.js`)
+
+- A race-to-the-finish board game against the computer that any future Citadel game (math,
+  reading, science...) can use with its own questions: `CitadelRace.start({ mount, playerName,
+  ask(tier, who), tiers, cpuLevels, theme, onAnswer, onTier, onEnd, speak, sound })`.
+  `CitadelRace.fromBank(q)` turns a `citadel-questions.js` question into a race question.
+- It copies Ladder Race's gameplay, not its PLC content:
+  - **Board:** 30 squares, ladders up, "downs" back (the theme names them: short circuits,
+    dragon slides...).
+  - **Turn:** roll the move die, then up to 3 tries, each a new question. A wrong answer
+    costs 1 square; a roll used up, or 3 wrong answers, loses the turn.
+  - **Adapts:** 3 right in a row = harder; 2 wrong at a tier = easier.
+  - **Computer:** a move die and a skill die (6 = 40%, 5/4 = 60%, 3 = 80%, 1/2 = random
+    10–90%). It follows the same 3-try rule, with +20% per retry. Every 3rd turn it gets a
+    wild card: a skill die under 4 is re-rolled, with +30% (max 95%). Its question is shown so
+    the kid can follow along.
+- No game uses it yet. A game that does still follows the Citadel rules (coins, skill areas,
+  mastery, trophies) through `citadel-core.js`, using the `onAnswer` and `onEnd` callbacks.
+
 ## Planned (not built yet): hidden quests and special events
 
 - A hidden quest appears when a hero reaches each new rank: Squire, Knight,
@@ -204,8 +256,9 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   questions covering everything the hero should have learned up to that rank.
 - The computer gets harder to beat at each rank: easy to beat at Squire,
   medium at Knight, hard at Engineer, hardest at Master Engineer.
-- Movement uses the dice rules from Ariet's snake and ladder game. Those
-  rules are not in this repository yet; ask Ariet for them before building.
+- The quest board game uses Ladder Race's dice rules: move die, skill die, 3 tries, and a
+  wrong answer costs one square. It asks the hero's own questions instead of ladder logic.
+  Build it on the reusable race board (`citadel-race.js`).
 - Completing a quest earns a real-money reward, $5 by default, amount
   changeable in the Treasury.
 - The parent controls quests both ways: an on/off switch per hero, and the
@@ -216,6 +269,24 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   games) or decide on a money reward.
 - Build quests and events only after the first games exist, since they use
   the games' questions.
+
+## Planned (not built yet): story lessons (Imperial Library)
+
+- Each game gets an original interactive story that teaches its concept first. Example: a
+  kid-friendly mystery where a detective follows math clues to catch the culprit.
+- Three steps:
+  1. The kid reads how the character solves the first clue.
+  2. The character asks "What should I do now?" and the kid answers.
+  3. The attached game unlocks, and the kid plays as that character using the same skill.
+- The game unlocks when the kid finishes the story and answers its questions. No timer.
+- Length by level:
+  - Level 1: about 5 minutes (big pictures, few words, uses read-aloud).
+  - Level 2: about 10 minutes.
+  - Level 3: about 15 minutes.
+- After the first read the game stays unlocked, and the story can be reread anytime.
+- All stories, characters and titles must be our own originals, never copied from existing books.
+- The first story will be a test; Ariet picks its theme later. Pizza Party will later be
+  reworked into a real game alongside it.
 
 ## Planned (not built yet): treasures
 
@@ -242,6 +313,12 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - Show the current version in small text in the **footer of every page**. To update it,
   search all files for the tag `[VERSION]` (each page footer) and change
   `VERSION` in `citadel-core.js` `[JS-VERSION]`. New pages must include the footer version.
+- **Newest files after every update (cache busting):** browsers keep old copies of shared
+  files. Every link to a local `.css` or `.js` file ends in the version, for example
+  `citadel-core.js?v=0.5.0`. With each new version, search all `.html` files for `?v=` and
+  change every one to the new number (the old number must not remain anywhere). New pages
+  and new shared files must use `?v=` too. A changed `?v=` makes browsers fetch the new file.
+  HTML pages themselves may stay cached for up to about 10 minutes after a merge (GitHub Pages).
 - Add a line to the **change log at the bottom of this file** too.
 - In every pull request description, include a short **"How to undo this version"** note
   explaining how to use GitHub's **Revert** button on the merged pull request.
@@ -265,16 +342,20 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - [ ] Coins: just for fun, or tied to real rewards approved in the Treasury?
 - [x] Treasury PIN: Ariet sets it on first use (built in v0.2.0)
 - [ ] When to move the kids' games to their own repository (before sharing outside the family)
+- [ ] Theme of the first story lesson (Ariet picks later)
 
 ## Current files
 
 | File | What it is |
 | --- | --- |
-| `index.html` | Main page (castle, four halls: Proving Grounds open, "Enter the Citadel" button) |
-| `heroes.html` | "Who enters the Citadel?" hero cards |
+| `index.html` | Main page (castle, four halls: Proving Grounds open, Nexus closed here, "Enter the Citadel" button) |
+| `heroes.html` | "Who enters the Citadel?" hero cards (`?next=<hall>` returns to that hall after choosing) |
 | `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, halls, treasure chest, trophy hall, settings |
 | `visitor.html` | Visitor page for friends: halls, games, nothing saved |
 | `proving-grounds.html` | The Proving Grounds hall: list of its games (`?id=hero or visitor`) |
+| `nexus.html` | The Nexus hall (`?id=hero`), only for heroes with Nexus access |
+| `nexus/ladder-race.html` | Ladder Race: standalone game from Ariet's PLC course (exception, see Nexus) |
+| `citadel-race.js` | Reusable race board for future Citadel games |
 | `games/pizza-party.html` | Pizza Party, the first game and the template for others |
 | `games/pizza-party-questions.js` | Pizza Party's question makers (added to the test bank) |
 | `citadel-questions.js` | Shared test question bank, themes, pictures and step-by-step explanations |
@@ -302,3 +383,8 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - Nov 15, 2026: **v0.4.0 Pizza Party.** First game (`games/pizza-party.html`), Proving Grounds
   opened (`proving-grounds.html`), shared question bank (`citadel-questions.js`), answer reporting,
   skill grades and mastery in `citadel-core.js`, skill grades in the Treasury. Game rules above.
+- Nov 15, 2026: **v0.5.0 The Nexus, Ladder Race and game rules.** Nexus hall (`nexus.html`) with
+  Ariet's Ladder Race (`nexus/ladder-race.html`, standalone exception), "Nexus access" switch in
+  the Treasury, reusable race board (`citadel-race.js`), `?v=` cache busting on every page,
+  return to the hall after choosing a hero (`heroes.html?next=`), "How every game teaches"
+  rules, and planned quest dice rules and story lessons.
