@@ -14,18 +14,30 @@ Version numbers look like `v0.2.0`:
   The four hall banners on the main page stay closed.
 - **"Who enters the Citadel?" screen** with one card per hero: nickname, crest and color.
   Tapping a card opens that hero's home page.
-- **Hero home page:** nickname, crest, gold coins (start at 0), rank (Apprentice to start),
-  level, and the four halls (all "Gates open soon").
+- **Hero home page:** nickname, crest, gold coins (start at 0), rank and tier with a
+  bronze/silver/gold badge (starts at "Apprentice – Bronze"), level, the next test and its
+  status, and the four halls (all "Gates open soon").
+- **Rank ladder and tests:** 5 ranks × 3 tiers (Bronze, Silver, Gold). Moving up one tier
+  always needs a passed test (14 tests; Gold → next rank is the "promotion test").
+  Coins unlock a test but never raise a rank by themselves. Pass mark 75%; a fail costs half
+  the test's coins; one retake; failing the retake locks the test until each weak area
+  (under 75%) reaches 90% in its game. While a test is waiting, no new games unlock.
+- **Test page** (`test.html`): shows the next test, its coin amount, status and rules. Taking it
+  shows "Test questions coming soon". A parent-only preview (Treasury PIN) can pretend a
+  pass, a fail, add coins, or a 90% score in a weak area, to see the whole flow.
 - **The Treasury** (parent area behind a 4-digit PIN): add, edit and remove heroes, set each
-  hero's level (1, 2 or 3) and see their coins. On first use it asks you to create the PIN.
+  hero's level (1, 2 or 3) and see their progress: rank and tier, coins, next test status
+  and weak areas. A table sets the coin amount for each of the 14 tests (starting numbers
+  20 to 400, changeable). On first use it asks you to create the PIN.
   You can also change the PIN, lock the Treasury, and, if the PIN is forgotten, erase
   the Treasury on that device and start over.
-- **Shared code** in `citadel-core.js` (heroes, coins, ranks, levels, PIN, halls) and a
+- **Shared code** in `citadel-core.js` (heroes, coins, rank ladder, tests, area scores, levels,
+  PIN, halls) and a
   shared look in `citadel-core.css`, so future games can reuse them.
 - Version number in small text in the footer of every page.
 
 **Files changed**
-- New: `heroes.html`, `hero.html`, `treasury.html`, `citadel-core.js`, `citadel-core.css`, `CHANGELOG.md`
+- New: `heroes.html`, `hero.html`, `treasury.html`, `test.html`, `citadel-core.js`, `citadel-core.css`, `CHANGELOG.md`
 - Changed: `index.html` (button and version number), `CLAUDE.md` (version rules and change log)
 
 **Why**
@@ -35,8 +47,10 @@ pick the right difficulty. Rewards and payouts are left out on purpose for a lat
 **Good to know**
 - Everything is saved on that device only (phone, tablet or computer). It does not sync.
 - The PIN keeps kids out but is not real security.
-- Rank is based on all coins ever earned. The amounts (Squire 50, Knight 150, Engineer 400,
-  Master Engineer 1000) are a first guess and easy to change in `citadel-core.js` `[JS-RANKS]`.
+- Ranks first used coin totals; before release this was changed to the test-based ladder
+  above, so ranks only go up by passing tests.
+- Real test questions come with the games. Each question will be tagged with the one skill
+  ("area") it checks.
 
 ---
 

@@ -3,14 +3,16 @@
   SolidMind Citadel - a hero's home page (hero.html?id=...)
   ------------------------------------------------------------
   Purpose: one page used by every hero. The "id" in the address says
-  which hero to show: nickname, crest, gold coins, rank, level and the
-  four halls (closed for now: "Gates open soon").
+  which hero to show: nickname, crest, gold coins, rank and tier
+  (e.g. "Squire – Silver"), level, their next test, and the four halls
+  (closed for now: "Gates open soon").
 
   Depends on: citadel-core.js, citadel-core.css
 
   Search these tags to jump to a section:
     [HTML-TOP]      links back to the hero list
-    [HTML-HERO]     crest, nickname, coins, rank, level
+    [HTML-HERO]     crest, nickname, coins, rank and tier, level
+    [HTML-TEST]     the hero's next test and its status
     [HTML-HALLS]    the four halls (drawn by Citadel.renderHalls)
     [HTML-FOOTER]   bottom of the page and version number
     [JS-HOME]       fills in the page for the chosen hero
@@ -46,9 +48,20 @@
     <ul class="stats">
       <li class="stat"><span class="label">Gold coins</span>
         <span class="value"><span class="coin" aria-hidden="true"></span><span id="hero-coins">0</span></span></li>
-      <li class="stat"><span class="label">Rank</span><span class="value" id="hero-rank">Apprentice</span></li>
+      <li class="stat"><span class="label">Rank</span><span class="value" id="hero-rank"></span></li>
       <li class="stat"><span class="label">Level</span><span class="value" id="hero-level">1</span></li>
     </ul>
+
+    <!-- [HTML-TEST] Filled in by the script. Tests never start by themselves:
+         the hero taps "Go to the test" when they choose. -->
+    <section class="next-test" aria-labelledby="test-title">
+      <h2 id="test-title">Next test</h2>
+      <p id="test-name"></p>
+      <p><span class="state-tag" id="test-state"></span></p>
+      <p id="test-text"></p>
+      <ul class="weak-list" id="weak-list" hidden></ul>
+      <div class="btn-row" id="test-go" hidden><a class="btn" id="test-link" href="#">Go to the test</a></div>
+    </section>
 
     <!-- [HTML-HALLS] -->
     <h2 class="halls-title">Choose a hall</h2>
@@ -92,9 +105,37 @@
   document.getElementById("crest-spot").appendChild(C.crestSvg(hero, 120));
   document.getElementById("hero-name").textContent = hero.nickname;
   document.getElementById("hero-coins").textContent = hero.coins;
-  document.getElementById("hero-rank").textContent = C.rankFor(hero);
+  document.getElementById("hero-rank").appendChild(C.rankBadge(hero));
   document.getElementById("hero-level").textContent = hero.level;
+
+  // Next test: name, status, weak areas (if locked), and a link when it can be taken.
+  var st = C.testStatus(hero);
+  var STATE_NAMES = { top: "Top of the ladder", coins: "Locked: needs coins", ready: "Ready",
+    "retake-coins": "Failed once", retake: "Retake ready", mastery: "Locked until mastery" };
+  document.getElementById("test-name").textContent = st.test ? st.test.name : "You are a Master Engineer \u2013 Gold!";
+  var tag = document.getElementById("test-state");
+  tag.textContent = STATE_NAMES[st.state];
+  tag.className = "state-tag state-" + st.state;
+  document.getElementById("test-text").textContent = C.testStatusText(hero);
+  if (st.weakAreas.length) {
+    var list = document.getElementById("weak-list");
+    st.weakAreas.forEach(function (a) {
+      list.appendChild(C.el("li", { class: a.done ? "done" : null,
+        text: a.label + (a.done ? " \u2013 mastered" : " \u2013 needs " + C.MASTERY_MARK + "%") }));
+    });
+    list.hidden = false;
+  }
+  if (st.state !== "top") {
+    document.getElementById("test-link").href = "test.html?id=" + encodeURIComponent(hero.id);
+    document.getElementById("test-go").hidden = false;
+  }
+
   C.renderHalls(document.getElementById("halls"));
+  // Rule 6: while a test is waiting, no NEW games open. Say so kindly.
+  if (!C.newGamesAllowed(hero)) {
+    document.querySelector(".halls-sub").textContent =
+      "New games stay closed until your test is done. Games you already have can still be played.";
+  }
   document.getElementById("hero-home").hidden = false;
 })();
 </script>

@@ -7,7 +7,7 @@
   still looks right even on its own.)
 
   Depends on: Google Fonts Cinzel + Alegreya Sans (linked in each page).
-  Used by:    heroes.html, hero.html, treasury.html
+  Used by:    heroes.html, hero.html, treasury.html, test.html
 
   Search these tags to jump to a section:
     [CSS-COLORS]   night and daylight color sets (same as index.html)
@@ -16,6 +16,8 @@
     [CSS-BUTTONS]  buttons (at least 48 px tall for small fingers)
     [CSS-HEROES]   hero cards and the shield crest
     [CSS-HOME]     a hero's home page: coins, rank, level
+    [CSS-RANK]     bronze / silver / gold rank badge
+    [CSS-TEST]     next-test box, test page, Treasury coin table
     [CSS-FORMS]    Treasury forms, crest and color pickers
     [CSS-BANNERS]  the four hall banners
     [CSS-NOTICE]   warning and "saved on this device" notes
@@ -162,6 +164,48 @@ a.hero-card:hover, a.hero-card:focus-visible { transform: translateY(-4px); bord
   background: radial-gradient(circle at 35% 35%, #FFE7A3, #D9A441 55%, #8A6418);
   box-shadow: inset 0 0 0 2px rgba(138, 100, 24, .6);
 }
+
+/* [CSS-RANK] Rank badge: a small medal colored bronze, silver or gold, plus the words */
+.rank-badge { display: inline-flex; align-items: center; gap: .4rem; font-weight: 700; }
+.medal {
+  flex: none; width: 1.05em; height: 1.05em; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .25), 0 1px 3px var(--shadow);
+}
+.tier-bronze .medal { background: radial-gradient(circle at 35% 35%, #F2C29B, #B8733A 60%, #7A4520); }
+.tier-silver .medal { background: radial-gradient(circle at 35% 35%, #FFFFFF, #B9C2CC 60%, #6E7884); }
+.tier-gold   .medal { background: radial-gradient(circle at 35% 35%, #FFE7A3, #D9A441 60%, #8A6418); }
+.stat .rank-badge { font-family: "Cinzel", Georgia, serif; font-size: 1.1rem; color: var(--gold); justify-content: center; }
+.hero-card .rank-badge { color: var(--text); font-size: 1rem; }
+
+/* [CSS-TEST] Next test box (hero page), test page, coin table (Treasury) */
+.next-test {
+  max-width: 640px; margin: 1.25rem auto 0; padding: 1rem 1.25rem; text-align: center;
+  background: var(--stone); border: 2px solid var(--arcane); border-radius: 14px;
+}
+.next-test h2 { font-size: 1.15rem; margin: 0 0 .3rem; }
+.next-test p { margin: .3rem 0; }
+.weak-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .3rem; }
+.weak-list li::before { content: "\2610  "; color: var(--text-dim); }
+.weak-list li.done::before { content: "\2611  "; color: var(--arcane); }
+.state-tag {
+  display: inline-block; padding: .1rem .6rem; border-radius: 99px; font-size: .9rem; font-weight: 700;
+  background: var(--sky); border: 1px solid var(--gold-soft);
+}
+.state-ready, .state-retake { border-color: var(--arcane); color: var(--arcane); }
+.state-mastery { border-color: var(--danger); color: var(--danger); }
+.coming-soon {
+  text-align: center; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.3rem;
+  color: var(--arcane); padding: 1.25rem; margin: 1rem 0; border: 2px dashed var(--arcane); border-radius: 14px;
+}
+.rules { margin: .5rem 0 0; padding-left: 1.2rem; }
+.rules li { margin: .25rem 0; }
+.table-scroll { overflow-x: auto; }
+.coin-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+.coin-table th, .coin-table td { padding: .4rem .5rem; border-bottom: 1px solid var(--gold-soft); text-align: left; vertical-align: middle; }
+.coin-table th { font-family: "Cinzel", Georgia, serif; color: var(--gold); font-size: .95rem; }
+.coin-table input { width: 6.5rem; min-height: 44px; padding: .3rem .5rem; font: inherit; color: var(--text);
+  background: var(--sky); border: 2px solid var(--gold-soft); border-radius: 8px; }
+.promo { color: var(--arcane); font-size: .9rem; font-weight: 700; }
 
 /* [CSS-FORMS] Treasury */
 .panel {

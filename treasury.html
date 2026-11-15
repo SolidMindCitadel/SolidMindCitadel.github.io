@@ -3,7 +3,9 @@
   SolidMind Citadel - The Treasury, parent area (treasury.html)
   ------------------------------------------------------------
   Purpose: behind a 4-digit PIN, a parent can add, edit and remove
-  heroes, set each hero's level (1, 2 or 3) and see their coins.
+  heroes, set each hero's level (1, 2 or 3), see each hero's progress
+  (rank and tier, coins, next test status, weak areas) and change the
+  coin amount for each of the 14 tests.
   On first use it asks the parent to create the PIN.
   Rewards and payouts come in a later version.
 
@@ -15,12 +17,14 @@
   Search these tags to jump to a section:
     [HTML-SETUP]    first visit: create the PIN
     [HTML-UNLOCK]   enter the PIN
-    [HTML-ROSTER]   list of heroes with level and coins
+    [HTML-ROSTER]   list of heroes with level, coins, rank and next test
+    [HTML-TESTS]    coin amount for each of the 14 tests
     [HTML-FORM]     add or edit a hero (nickname, crest, color, level)
     [HTML-PIN]      change PIN, lock, forgot PIN
     [HTML-FOOTER]   bottom of the page and version number
     [JS-VIEWS]      switches between setup / unlock / manage
     [JS-ROSTER]     draws the hero list
+    [JS-TESTS]      the test coin table (save / back to starting numbers)
     [JS-FORM]       add / edit hero form
     [JS-PINS]       create, check and change the PIN; reset
 
@@ -91,6 +95,25 @@
       <ul class="roster" id="roster"></ul>
       <p class="ok" id="roster-msg" role="status"></p>
     </section>
+
+    <!-- [HTML-TESTS] -->
+    <form class="panel" id="test-coins" novalidate>
+      <h2>Test coin amounts</h2>
+      <p>A test unlocks when a hero has at least this many coins. If they don't pass, they lose half of it.
+        These are starting numbers; change them any time.</p>
+      <div class="table-scroll">
+        <table class="coin-table">
+          <thead><tr><th scope="col">#</th><th scope="col">Test</th><th scope="col">Coins</th></tr></thead>
+          <tbody id="coin-rows"></tbody>
+        </table>
+      </div>
+      <p class="error" id="coins-error" role="alert"></p>
+      <p class="ok" id="coins-msg" role="status"></p>
+      <div class="btn-row">
+        <button class="btn" type="submit">Save coin amounts</button>
+        <button class="btn ghost" type="button" id="coins-default">Back to starting numbers</button>
+      </div>
+    </form>
 
     <!-- [HTML-FORM] Used for both adding and editing -->
     <form class="panel" id="hero-form" novalidate>
@@ -167,7 +190,7 @@
     ["setup", "unlock", "manage"].forEach(function (v) { $(v).hidden = v !== view; });
     var focus = { setup: "new-pin", unlock: "pin" }[view];
     if (focus) $(focus).focus();
-    if (view === "manage") { drawRoster(); resetForm(); }
+    if (view === "manage") { drawRoster(); resetForm(); drawCoinTable(C.getTestCoins()); }
   }
 
   /* [JS-PINS] */
@@ -233,7 +256,9 @@
         C.crestSvg(hero, 52),
         el("div", null,
           el("div", { class: "who", text: hero.nickname }),
-          el("div", { class: "info", text: hero.coins + " gold coins · " + C.rankFor(hero) })),
+          el("div", { class: "info" }, C.rankBadge(hero), " \u00B7 " + hero.coins + " gold coins"),
+          el("div", { class: "info", text: "Next test: " + C.testStatusText(hero) }),
+          weakList(hero)),
         el("div", { class: "controls" },
           el("label", null, "Level", levelSel),
           el("button", { class: "btn ghost small", type: "button", text: "Edit",
@@ -242,6 +267,51 @@
             "aria-label": "Remove " + hero.nickname, onclick: function () { removeHero(hero); } }))));
     });
   }
+
+  // Weak areas (only when a test is locked until mastery), with a check when mastered.
+  function weakList(hero) {
+    var areas = C.testStatus(hero).weakAreas;
+    if (!areas.length) return null;
+    var ul = el("ul", { class: "weak-list" });
+    areas.forEach(function (a) {
+      ul.appendChild(el("li", { class: a.done ? "done" : null,
+        text: a.label + (a.done ? " \u2013 mastered" : " \u2013 needs " + C.MASTERY_MARK + "%") }));
+    });
+    return ul;
+  }
+
+  /* [JS-TESTS] One row per test, with a number box for its coin amount. */
+  function drawCoinTable(values) {
+    var body = $("coin-rows");
+    body.textContent = "";
+    values.forEach(function (n, t) {
+      var info = C.testInfo(t);
+      body.appendChild(el("tr", null,
+        el("td", { text: t + 1 }),
+        el("td", null, info.from.label + " \u2192 " + info.to.label,
+          info.promotion ? el("div", { class: "promo", text: "Promotion test" }) : null),
+        el("td", null, el("input", { type: "number", inputmode: "numeric", min: 1, max: 99999, step: 1,
+          value: n, "aria-label": "Coins for test " + (t + 1) }))));
+    });
+  }
+  $("test-coins").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var values = Array.prototype.map.call($("coin-rows").querySelectorAll("input"), function (i) { return i.value; });
+    try {
+      C.setTestCoins(values);
+      $("coins-error").textContent = "";
+      $("coins-msg").textContent = "Coin amounts saved.";
+      drawRoster();
+    } catch (err) {
+      $("coins-msg").textContent = "";
+      $("coins-error").textContent = err.message;
+    }
+  });
+  $("coins-default").addEventListener("click", function () {
+    drawCoinTable(C.DEFAULT_TEST_COINS);
+    $("coins-error").textContent = "";
+    $("coins-msg").textContent = "Starting numbers filled in. Press Save to keep them.";
+  });
 
   function removeHero(hero) {
     var sure = window.confirm("Remove " + hero.nickname + "? Their coins on this device will be lost. This can't be undone.");

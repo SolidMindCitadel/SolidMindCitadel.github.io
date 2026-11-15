@@ -83,7 +83,8 @@
                          style: "--hero-color:" + color.hex },
       C.crestSvg(hero, 96),
       el("span", { class: "name", text: hero.nickname }),
-      el("span", { class: "meta", text: C.rankFor(hero) + " · Level " + hero.level }));
+      C.rankBadge(hero),
+      el("span", { class: "meta", text: "Level " + hero.level + " \u00B7 " + hero.coins + " coins" }));
     grid.appendChild(el("li", null, card));
   });
 })();

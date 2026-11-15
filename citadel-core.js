@@ -8,7 +8,7 @@
   (games in games/ will use "../citadel-core.js").
 
   Depends on: nothing. No frameworks, no server.
-  Used by:    heroes.html, hero.html, treasury.html
+  Used by:    heroes.html, hero.html, treasury.html, test.html
 
   Search these tags to jump to a section:
     [JS-VERSION]   the site version number
@@ -16,7 +16,9 @@
     [JS-CRESTS]    crest pictures heroes can pick
     [JS-COLORS]    hero colors
     [JS-LEVELS]    Level 1 / 2 / 3
-    [JS-RANKS]     Apprentice to Master Engineer
+    [JS-RANKS]     Apprentice to Master Engineer, Bronze/Silver/Gold tiers
+    [JS-TESTS]     the 14 tests, their rules, grading and coin amounts
+    [JS-AREAS]     games report area scores; 90% mastery unlocks a locked test
     [JS-HEROES]    add, edit, remove and read heroes
     [JS-COINS]     gold coins (games will call Citadel.addCoins)
     [JS-PIN]       Treasury PIN (a gate for kids, NOT real security)
@@ -45,7 +47,7 @@
   var memoryCopy = null; // used when localStorage is blocked
 
   function emptyData() {
-    return { schema: SCHEMA, heroes: [], pin: null };
+    return { schema: SCHEMA, heroes: [], pin: null, testCoins: DEFAULT_TEST_COINS.slice() };
   }
 
   function load() {
@@ -60,6 +62,10 @@
       var data = JSON.parse(raw);
       if (!data || typeof data !== "object" || !Array.isArray(data.heroes)) return emptyData();
       if (!("pin" in data)) data.pin = null;
+      if (!Array.isArray(data.testCoins) || data.testCoins.length !== DEFAULT_TEST_COINS.length) {
+        data.testCoins = DEFAULT_TEST_COINS.slice();
+      }
+      data.heroes.forEach(fillHero);
       return data;
     } catch (e) {
       // Saved data was damaged; start fresh instead of crashing.
@@ -90,6 +96,19 @@
   }
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  // Makes sure every saved hero has all the fields, even if it was saved
+  // by an older version of this file.
+  function fillHero(h) {
+    if (typeof h.coins !== "number") h.coins = 0;
+    if (typeof h.earned !== "number") h.earned = h.coins;
+    if (typeof h.step !== "number") h.step = 0;
+    if (!h.test || typeof h.test !== "object") h.test = freshTest();
+    if (!Array.isArray(h.test.weakAreas)) h.test.weakAreas = [];
+    if (!Array.isArray(h.test.mastered)) h.test.mastered = [];
+    if (!h.areas || typeof h.areas !== "object") h.areas = {};
+    return h;
+  }
 
   /* ---------------------------------------------------------------
      [JS-CRESTS] Pictures a hero can wear on their shield.
@@ -128,32 +147,221 @@
   var LEVELS = [1, 2, 3];
 
   /* ---------------------------------------------------------------
-     [JS-RANKS] Rank comes from the TOTAL coins a hero has ever earned
-     ("earned"), not the coins they have right now. That way, if coins
-     are later spent on rewards, a hero never drops in rank.
-     The coin amounts below are a first guess and easy to change.
+     [JS-RANKS] The rank ladder: 5 ranks x 3 tiers = 15 steps.
+       step 0  = Apprentice Bronze (everyone starts here)
+       step 1  = Apprentice Silver, step 2 = Apprentice Gold,
+       step 3  = Squire Bronze ... step 14 = Master Engineer Gold (the top).
+     A hero's place is saved as hero.step (0 to 14).
+     Ranks NEVER go up from coins alone: the only way up one step is
+     to pass that step's test (see [JS-TESTS]).
      --------------------------------------------------------------- */
-  var RANKS = [
-    { name: "Apprentice",      from: 0 },
-    { name: "Squire",          from: 50 },
-    { name: "Knight",          from: 150 },
-    { name: "Engineer",        from: 400 },
-    { name: "Master Engineer", from: 1000 }
-  ];
+  var RANKS = ["Apprentice", "Squire", "Knight", "Engineer", "Master Engineer"];
+  var TIERS = ["Bronze", "Silver", "Gold"];
+  var TOP_STEP = RANKS.length * TIERS.length - 1; // 14
 
-  function rankFor(hero) {
-    var earned = (hero && hero.earned) || 0;
-    var rank = RANKS[0];
-    for (var i = 0; i < RANKS.length; i++) {
-      if (earned >= RANKS[i].from) rank = RANKS[i];
+  // Turns a step number into { rank, tier, label }, e.g. "Squire – Silver"
+  function stepInfo(step) {
+    step = Math.max(0, Math.min(TOP_STEP, step | 0));
+    var rank = RANKS[Math.floor(step / TIERS.length)];
+    var tier = TIERS[step % TIERS.length];
+    return { step: step, rank: rank, tier: tier, label: rank + " – " + tier };
+  }
+  function rankFor(hero) { return stepInfo(hero ? hero.step : 0); }
+
+  /* ---------------------------------------------------------------
+     [JS-TESTS] The 14 tests, one between each pair of steps.
+     Test number t moves a hero from step t to step t+1.
+     Tests 2, 5, 8 and 11 (Gold to the next rank's Bronze) are the
+     "promotion tests".
+
+     Rules (Ariet's, also written in CLAUDE.md):
+     1. Each test has a coin amount. With at least that many coins the
+        test unlocks. The kid chooses when to take it; it never starts
+        by itself.
+     2. Pass mark 75%. Pass = keep all coins, move up one tier.
+     3. Fail = lose half the test's coin amount (rounded down).
+     4. After a first fail: ONE retake, and only with at least the
+        test's coin amount again.
+     5. Fail the retake = the test locks until the hero reaches 90% in
+        each "weak area" of that retake (an area scored under 75%), in
+        that area's game. Only results earned AFTER the lock count, and
+        each area counts only for itself. Then the test resets to a
+        fresh test (needs the coins again, first try + one retake).
+     6. While a test is unlocked, failed-once or locked for mastery,
+        no NEW games or challenges unlock for that hero
+        (Citadel.newGamesAllowed). Games they already have still work.
+
+     An "area" is one specific lesson or skill, like "adding-within-10"
+     or "latch-circuits". Every test question is tagged with exactly one.
+     --------------------------------------------------------------- */
+  var PASS_MARK = 75;
+  var MASTERY_MARK = 90;
+
+  // Starting coin amounts for the 14 tests. The parent can change them in
+  // the Treasury; these are only the defaults (marked as such in CLAUDE.md).
+  var DEFAULT_TEST_COINS = [20, 30, 50, 60, 80, 110, 120, 150, 200, 220, 260, 320, 350, 400];
+
+  function testInfo(t) {
+    var from = stepInfo(t), to = stepInfo(t + 1);
+    var promotion = from.rank !== to.rank;
+    return { number: t, from: from, to: to, promotion: promotion,
+      name: (promotion ? "Promotion test: " : "Tier test: ") + from.label + " → " + to.label };
+  }
+
+  function getTestCoins() { return load().testCoins.slice(); }
+
+  function setTestCoins(list) {
+    if (!Array.isArray(list) || list.length !== DEFAULT_TEST_COINS.length) throw new Error("There must be 14 coin amounts.");
+    var clean = list.map(function (n) { return Math.floor(Number(n)); });
+    for (var i = 0; i < clean.length; i++) {
+      if (!(clean[i] >= 1 && clean[i] <= 99999)) throw new Error("Test " + (i + 1) + ": use a whole number from 1 to 99999.");
     }
-    return rank.name;
+    var data = load();
+    data.testCoins = clean;
+    save(data);
+  }
+
+  function freshTest() { return { fails: 0, locked: false, weakAreas: [], mastered: [] }; }
+
+  /* Where a hero stands with their next test. Returns:
+       { state, test, cost, coins, weakAreas: [{id, label, done}] }
+     state is one of:
+       "top"         at Master Engineer Gold, no more tests
+       "coins"       locked: not enough coins yet
+       "ready"       unlocked: the hero may take it when they choose
+       "retake-coins" failed once; retake unlocks at the coin amount
+       "retake"      failed once; the one retake is ready
+       "mastery"     failed twice; locked until weak areas reach 90% */
+  function testStatus(hero) {
+    var data = load();
+    if (hero.step >= TOP_STEP) return { state: "top", test: null, cost: 0, coins: hero.coins, weakAreas: [] };
+    var cost = data.testCoins[hero.step];
+    var t = hero.test;
+    var state;
+    if (t.locked) state = "mastery";
+    else if (t.fails === 0) state = hero.coins >= cost ? "ready" : "coins";
+    else state = hero.coins >= cost ? "retake" : "retake-coins";
+    return {
+      state: state, test: testInfo(hero.step), cost: cost, coins: hero.coins,
+      weakAreas: t.weakAreas.map(function (a) { return { id: a.id, label: a.label, done: t.mastered.indexOf(a.id) >= 0 }; })
+    };
+  }
+
+  // Plain-words version of testStatus, for the hero page and the Treasury.
+  function testStatusText(hero) {
+    var s = testStatus(hero);
+    switch (s.state) {
+      case "top": return "Top of the ladder. No more tests.";
+      case "coins": return "Locked: unlocks at " + s.cost + " coins (has " + s.coins + ").";
+      case "ready": return "Ready! Take it whenever you choose.";
+      case "retake-coins": return "Failed once. One retake left; it unlocks at " + s.cost + " coins (has " + s.coins + ").";
+      case "retake": return "Failed once. The one retake is ready whenever you choose.";
+      default: return "Locked until mastery: reach " + MASTERY_MARK + "% in each weak area below.";
+    }
+  }
+
+  function canTakeTest(hero) {
+    var st = testStatus(hero).state;
+    return st === "ready" || st === "retake";
+  }
+
+  // Rule 6. Games/halls should call this before unlocking anything NEW.
+  function newGamesAllowed(hero) {
+    var st = testStatus(hero).state;
+    return st === "coins" || st === "top";
+  }
+
+  /* Grades a finished test. "answers" is a list, one per question:
+       { area: "adding-within-10", label: "Adding within 10", correct: true }
+     Returns { percent, passed, areas: [{id, label, right, total, percent}],
+               weakAreas: [{id, label}] }  (weak = under 75% in that area) */
+  function gradeTest(answers) {
+    var byArea = {}, order = [], right = 0;
+    (answers || []).forEach(function (a) {
+      var id = String(a.area || "general");
+      if (!byArea[id]) { byArea[id] = { id: id, label: String(a.label || id), right: 0, total: 0 }; order.push(id); }
+      byArea[id].total++;
+      if (a.correct) { byArea[id].right++; right++; }
+    });
+    var total = (answers || []).length;
+    var percent = total ? Math.round((right / total) * 1000) / 10 : 0;
+    var areas = order.map(function (id) {
+      var x = byArea[id];
+      x.percent = Math.round((x.right / x.total) * 1000) / 10;
+      return x;
+    });
+    return {
+      percent: percent, passed: total > 0 && percent >= PASS_MARK, areas: areas,
+      weakAreas: areas.filter(function (x) { return x.percent < PASS_MARK; })
+                      .map(function (x) { return { id: x.id, label: x.label }; })
+    };
+  }
+
+  /* A test page calls this when the hero finishes their test.
+     It applies rules 2-5 and saves. Returns { result, outcome, hero }
+     outcome: "passed", "failed-once" or "locked". */
+  function finishTest(heroId, answers) {
+    var data = load();
+    var i = findById(data.heroes, heroId);
+    if (i < 0) throw new Error("That hero is no longer here.");
+    var hero = data.heroes[i];
+    if (!canTakeTest(hero)) throw new Error("This test can't be taken right now.");
+    var cost = data.testCoins[hero.step];
+    var result = gradeTest(answers);
+    var outcome;
+    if (result.passed) {
+      hero.step += 1;               // up one tier; coins are kept
+      hero.test = freshTest();
+      outcome = "passed";
+    } else {
+      hero.coins = Math.max(0, hero.coins - Math.floor(cost / 2));
+      if (hero.test.fails === 0) {
+        hero.test.fails = 1;
+        outcome = "failed-once";
+      } else {
+        // Second fail: lock until the retake's weak areas are mastered.
+        hero.test = { fails: 2, locked: true, weakAreas: result.weakAreas, mastered: [] };
+        outcome = "locked";
+      }
+    }
+    save(data);
+    return { result: result, outcome: outcome, hero: hero };
+  }
+
+  /* [JS-AREAS] Games call this after a round to report how the hero did
+     in ONE area (a percent from 0 to 100). Each game decides how its
+     percent is measured (e.g. 9 wins out of 10 = 90, or accuracy).
+     The best score per area is kept in hero.areas. If the hero's test
+     is locked and this is one of its weak areas at 90% or more, that
+     area counts as mastered. When every weak area is mastered, the test
+     resets to a fresh test (rule 5). Returns the updated hero. */
+  function reportAreaScore(heroId, area, percent) {
+    area = String(area || "");
+    percent = Number(percent);
+    if (!area || !(percent >= 0 && percent <= 100)) return getHero(heroId);
+    var data = load();
+    var i = findById(data.heroes, heroId);
+    if (i < 0) return null;
+    var hero = data.heroes[i];
+    var prev = hero.areas[area];
+    hero.areas[area] = { best: prev ? Math.max(prev.best, percent) : percent, last: percent };
+    var t = hero.test;
+    if (t.locked && percent >= MASTERY_MARK && t.mastered.indexOf(area) < 0 &&
+        t.weakAreas.some(function (a) { return a.id === area; })) {
+      t.mastered.push(area);
+      if (t.mastered.length >= t.weakAreas.length) hero.test = freshTest();
+    }
+    save(data);
+    return hero;
   }
 
   /* ---------------------------------------------------------------
      [JS-HEROES]
      A hero looks like:
-       { id, nickname, crest, color, level, coins, earned, created }
+       { id, nickname, crest, color, level, coins, earned, created,
+         step,   // place on the rank ladder, 0-14 (see [JS-RANKS])
+         test,   // where they stand on their next test (see [JS-TESTS])
+         areas } // best/last score per area, reported by games ([JS-AREAS])
      Nicknames only. Never real names (the site is public, and the
      Treasury reminds the parent of this).
      --------------------------------------------------------------- */
@@ -207,8 +415,11 @@
       color: pick(COLORS, info.color).id,
       level: LEVELS.indexOf(Number(info.level)) >= 0 ? Number(info.level) : 1,
       coins: 0,   // coins they have now
-      earned: 0,  // all coins ever earned (sets the rank)
-      created: new Date().toISOString().slice(0, 10)
+      earned: 0,  // all coins ever earned (for the parent to see; NOT used for rank)
+      created: new Date().toISOString().slice(0, 10),
+      step: 0,    // Apprentice Bronze
+      test: freshTest(),
+      areas: {}
     };
     data.heroes.push(hero);
     save(data);
@@ -350,6 +561,14 @@
     return svg;
   }
 
+  // A small medal + "Rank – Tier" label, e.g. a silver medal and "Squire – Silver".
+  function rankBadge(hero) {
+    var info = rankFor(hero);
+    return el("span", { class: "rank-badge tier-" + info.tier.toLowerCase() },
+      el("span", { class: "medal", "aria-hidden": "true" }),
+      el("span", { text: info.label }));
+  }
+
   // Shows a gentle warning at the top of a page when this device can't save.
   function showStorageNotice(container) {
     if (storageWorks()) return;
@@ -402,12 +621,18 @@
   // Everything other pages can use, under one name: Citadel
   window.Citadel = {
     VERSION: VERSION,
-    CRESTS: CRESTS, COLORS: COLORS, LEVELS: LEVELS, RANKS: RANKS, HALLS: HALLS,
+    CRESTS: CRESTS, COLORS: COLORS, LEVELS: LEVELS, RANKS: RANKS, TIERS: TIERS, HALLS: HALLS,
+    TOP_STEP: TOP_STEP, PASS_MARK: PASS_MARK, MASTERY_MARK: MASTERY_MARK,
+    DEFAULT_TEST_COINS: DEFAULT_TEST_COINS.slice(),
     MAX_HEROES: MAX_HEROES, MAX_NICK: MAX_NICK,
     storageWorks: storageWorks, showStorageNotice: showStorageNotice,
     getHeroes: getHeroes, getHero: getHero, addHero: addHero,
     updateHero: updateHero, removeHero: removeHero, checkHero: checkHero,
-    addCoins: addCoins, rankFor: rankFor,
+    addCoins: addCoins, rankFor: rankFor, stepInfo: stepInfo, rankBadge: rankBadge,
+    testInfo: testInfo, getTestCoins: getTestCoins, setTestCoins: setTestCoins,
+    testStatus: testStatus, testStatusText: testStatusText, canTakeTest: canTakeTest,
+    newGamesAllowed: newGamesAllowed, gradeTest: gradeTest, finishTest: finishTest,
+    reportAreaScore: reportAreaScore,
     hasPin: hasPin, setPin: setPin, checkPin: checkPin, validPin: validPin,
     resetEverything: resetEverything,
     el: el, crestSvg: crestSvg, renderHalls: renderHalls
