@@ -26,7 +26,7 @@ Version numbers look like `v0.2.0`:
 - **Visitor mode:** a "Play as a visitor" button on the heroes screen opens a visitor page.
   Visitors can play games (once they exist), but nothing is saved, coins aren't kept, and they
   can't take rank tests.
-- `CLAUDE.md`: "son's area" is now "PLC beta tester's area"; new sections describe the hero page
+- `CLAUDE.md`: the Nexus row of the site map now says "PLC beta tester's area"; new sections describe the hero page
   features and the planned hidden quests, special events and treasures (gold dust, nuggets,
   bricks). Those planned parts are not built.
 - Heroes saved by v0.2.x are upgraded automatically: coins they already had appear as one line,

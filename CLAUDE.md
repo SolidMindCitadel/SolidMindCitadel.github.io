@@ -250,5 +250,5 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   test.html preview buttons now show the exact scores (11 of 12, 91.7% / 7 of 12, 58.3%).
 - Nov 15, 2026: **v0.3.0 Treasure chest, trophies, settings, backup and visitor mode.** Hero page
   gets coin history and per-game totals, trophy hall, Sound/Read-aloud settings; Treasury gets
-  "Correct coins" and backup/restore; new `visitor.html`; "son's area" renamed; planned hidden
+  "Correct coins" and backup/restore; new `visitor.html`; Nexus site-map note reworded; planned hidden
   quests, special events and treasures written down above (not built).
