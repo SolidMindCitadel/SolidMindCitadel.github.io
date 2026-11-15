@@ -22,6 +22,7 @@
     [CSS-QUESTIONS] question pictures and step-by-step explanations
                     (used by games and, later, rank tests)
     [CSS-HALL]     a hall page's list of games
+    [CSS-RACE]     the reusable race board (citadel-race.js)
     [CSS-FORMS]    Treasury forms, crest and color pickers
     [CSS-BANNERS]  the four hall banners
     [CSS-NOTICE]   warning and "saved on this device" notes
@@ -306,8 +307,75 @@ a.game-card:hover, a.game-card:focus-visible { transform: translateY(-4px); bord
 .game-card.locked { opacity: .7; }
 @media (prefers-reduced-motion: reduce) { .game-card { transition: none; } a.game-card:hover { transform: none; } }
 
+/* [CSS-RACE] Reusable race board (citadel-race.js), in the Citadel's colors */
+.race { display: grid; gap: 1rem; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); align-items: start; }
+@media (max-width: 900px) { .race { grid-template-columns: minmax(0, 1fr); } }
+.race-card { background: var(--stone); border: 2px solid var(--gold-soft); border-radius: 18px; padding: .9rem; min-width: 0; }
+.race-chips { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .6rem; }
+.race-chip { padding: .3rem .8rem; border-radius: 99px; border: 2px solid var(--gold-soft); font-weight: 700; display: flex; align-items: center; gap: .4rem; }
+.race-chip::before { content: ""; width: 1rem; height: 1rem; border-radius: 50%; }
+.race-chip.you::before { background: var(--arcane); }
+.race-chip.cpu::before { background: #E8603C; }
+.race-chip.turn { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
+.race-board svg { display: block; width: 100%; height: auto; }
+.race-sq { fill: var(--sky); stroke: var(--gold-soft); stroke-width: 2; }
+.race-sq.alt { fill: var(--stone-2); }
+.race-sq.finish { fill: #F3D58C; }
+.race-num { font: 700 17px "Alegreya Sans", sans-serif; fill: var(--text-dim); }
+.race-up line { stroke: #D9A441; stroke-width: 5; stroke-linecap: round; }
+.race-down { fill: none; stroke: #E23D4B; stroke-width: 4; stroke-linejoin: round; opacity: .85; }
+.race-piece { stroke: #0F1B30; stroke-width: 3; }
+.race-piece.you { fill: var(--arcane); }
+.race-piece.cpu { fill: #E8603C; }
+.race-legend { margin-top: .5rem; color: var(--text-dim); font-size: .95rem; }
+.race-status { font: 700 1.35rem/1.2 "Cinzel", Georgia, serif; color: var(--gold); margin: 0 0 .3rem; }
+.race-sub { color: var(--text-dim); margin: 0 0 .6rem; }
+.race-dicebox { display: flex; align-items: center; gap: .8rem; flex-wrap: wrap; }
+.race-die { width: 70px; height: 70px; border-radius: 14px; background: #fff; border: 3px solid #1B2A4A; display: grid; grid-template: repeat(3, 1fr) / repeat(3, 1fr); padding: 8px; flex: none; }
+.race-die span { width: 12px; height: 12px; border-radius: 50%; background: #1B2A4A; place-self: center; visibility: hidden; }
+.race-die span.v { visibility: visible; }
+.race-die.cpu span { background: #E8603C; }
+.race-die.skill { border-color: #6B3FD4; } .race-die.skill span { background: #6B3FD4; }
+.race-die.rolling { animation: race-wob .12s linear infinite; }
+@keyframes race-wob { 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+.race-dcol { display: flex; flex-direction: column; align-items: center; gap: .2rem; }
+.race-dcol small { font-weight: 700; color: var(--text-dim); }
+.race-chance { font: 700 1.2rem/1.2 "Cinzel", Georgia, serif; }
+.race-wild { font-weight: 700; color: #B9A2FF; }
+.race-tries { display: flex; gap: .35rem; align-items: center; flex-wrap: wrap; font-weight: 700; color: var(--text-dim); margin-top: .3rem; }
+.race-tries i { width: 20px; height: 20px; border-radius: 50%; border: 3px solid var(--arcane); background: var(--arcane); display: inline-block; }
+.race-tries i.used { background: var(--danger); border-color: var(--danger); }
+.race-question { margin-top: .8rem; border-top: 2px dashed var(--gold-soft); padding-top: .8rem; }
+.race-qtitle { font-size: 1.05rem; margin: 0 0 .3rem; }
+.race-pic { display: grid; place-items: center; margin: .4rem 0; }
+.race-q { font-weight: 700; font-size: 1.15rem; margin: .5rem 0; }
+.race-answers { display: grid; gap: .5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
+.race-ans {
+  min-height: 52px; padding: .4rem .6rem; border-radius: 12px; cursor: pointer;
+  font: 700 1.15rem/1.2 "Alegreya Sans", sans-serif; color: #1A1408;
+  background: linear-gradient(#FFE08A, #F2B33D); border: 3px solid #C47A2C;
+}
+.race-ans:disabled { cursor: default; }
+.race-ans.right { background: linear-gradient(#A6F0C6, #3CBF7A); border-color: #1E7A4A; }
+.race-ans.wrong { background: linear-gradient(#FFC2C2, #E85A5A); border-color: #9C2B2B; }
+.race-feedback { margin-top: .6rem; padding: .6rem .8rem; border-radius: 12px; }
+.race-feedback:empty { display: none; }
+.race-feedback.good { background: rgba(60, 191, 122, .18); }
+.race-feedback.bad { background: rgba(232, 90, 90, .16); }
+.race-lvl { margin-top: .4rem; font-weight: 700; color: var(--arcane); }
+.race-next { margin-top: .6rem; }
+.race-log { margin-top: .8rem; font-size: .95rem; color: var(--text-dim); max-height: 7rem; overflow: auto; }
+.race-settings { display: flex; flex-wrap: wrap; gap: .6rem; align-items: center; margin-top: .8rem; }
+.race-settings label { margin: 0; font-weight: 700; display: flex; align-items: center; gap: .4rem; }
+.race-settings select { width: auto; }
+.race-win { text-align: center; padding: .6rem 0; }
+.race-big { font: 800 2rem/1.1 "Cinzel", Georgia, serif; color: var(--gold); margin-bottom: .4rem; }
+@media (prefers-reduced-motion: reduce) { .race-die.rolling { animation: none; } }
+
 /* Treasury "Correct coins" box inside a hero row */
 .roster details.correct { grid-column: 1 / -1; }
+.roster .nexus-switch { grid-column: 1 / -1; margin: 0; font-weight: 700; }
+.roster .nexus-switch .hint { font-weight: 400; }
 .roster details.correct summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--gold); font-weight: 700; }
 
 /* [CSS-FORMS] Treasury */

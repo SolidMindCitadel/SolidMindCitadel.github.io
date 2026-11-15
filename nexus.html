@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - The Nexus hall (nexus.html?id=...)
+  ------------------------------------------------------------
+  Purpose: lists the games in the Nexus. The Nexus holds games from Ariet's
+  PLC training course (for now, Ladder Race). They are standalone games,
+  NOT part of the Citadel's learning system: no coins, skills, trophies or
+  rank tests. Only heroes whose "Nexus access" is on (set by a parent in the
+  Treasury) can enter. Visitors never can. Like the PIN, this is a gate for
+  kids, not security (the site is public).
+  Without an id, it asks for a hero first; heroes.html?next=nexus brings
+  them straight back here after they choose.
+
+  Depends on: citadel-core.js, citadel-core.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      links back
+    [HTML-GAMES]    the list of games (filled in by the script)
+    [HTML-CLOSED]   shown when this hero has no Nexus access
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-GAMES]      the games in this hall
+    [JS-LIST]       checks access and draws the game cards
+
+  Privacy: nicknames only; everything is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Nexus · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
+<link rel="stylesheet" href="citadel-core.css?v=0.5.0">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html" id="back-link">&larr; Back</a>
+    <a href="index.html">The gate</a>
+  </nav>
+
+  <header class="page-title">
+    <h1>The Nexus</h1>
+    <p>Where it all connects. Circuits, controllers and automation.</p>
+  </header>
+
+  <!-- [HTML-GAMES] -->
+  <ul class="game-list" id="games" hidden></ul>
+  <p class="device-note" id="note" hidden>These are games from the SolidMind PLC course. Just play and have fun: they don't earn coins or trophies.</p>
+
+  <!-- [HTML-CLOSED] -->
+  <div class="empty" id="closed" hidden>
+    <p><strong>The Nexus is closed for this hero.</strong></p>
+    <p>A parent can open it in the Treasury.</p>
+    <a class="btn" id="closed-link" href="heroes.html">Back</a>
+  </div>
+
+  <div class="empty" id="no-player" hidden>
+    <p><strong>Who's entering the Nexus?</strong></p>
+    <p>Choose your hero first.</p>
+    <div class="btn-row"><a class="btn" href="heroes.html?next=nexus">Choose a hero</a></div>
+  </div>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.5.0</span>
+  </div>
+</footer>
+
+<script src="citadel-core.js?v=0.5.0"></script>
+<script>
+(function () {
+  var C = window.Citadel, el = C.el;
+  function $(x) { return document.getElementById(x); }
+
+  // [JS-GAMES] One line per game in this hall.
+  var GAMES = [
+    { id: "ladder-race", name: "Ladder Race", emoji: "🪜", href: "nexus/ladder-race.html",
+      text: "Solve the ladder, climb the board, beat the computer." }
+  ];
+
+  // [JS-LIST]
+  var id = new URLSearchParams(location.search).get("id");
+  var hero = id ? C.getHero(id) : null;
+  C.showStorageNotice($("main"));
+  if (!hero) { $("no-player").hidden = false; return; }
+  var home = C.isVisitor(id) ? "visitor.html" : "hero.html?id=" + encodeURIComponent(id);
+  $("back-link").href = home;
+  $("back-link").textContent = C.isVisitor(id) ? "← Visitor page" : "← " + hero.nickname + "'s hall";
+  if (!C.hasNexusAccess(id)) { $("closed-link").href = home; $("closed").hidden = false; return; }
+
+  GAMES.forEach(function (g) {
+    var card = el("a", { class: "game-card", href: g.href + "?id=" + encodeURIComponent(id) },
+      el("span", { class: "game-emoji", "aria-hidden": "true", text: g.emoji }),
+      el("h2", { text: g.name }),
+      el("p", { text: g.text }),
+      el("span", { class: "btn play", text: "Play" }));
+    $("games").appendChild(el("li", null, card));
+  });
+  $("games").hidden = false;
+  $("note").hidden = false;
+})();
+</script>
+</body>
+</html>

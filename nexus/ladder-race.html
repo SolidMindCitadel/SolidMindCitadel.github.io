@@ -1,0 +1,585 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ladder Race</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@500;700;800&family=JetBrains+Mono:wght@600&display=swap">
+<!--
+  ======================================================================
+  FILE: ladder-race.html · "Ladder Race" (just-for-fun game prototype)
+  IDEA: Snakes-and-ladders race against the computer. Roll the dice:
+    the number = squares you can move; up to 3 tries, each miss takes 1 off. Each try is a tiny 1-2 rung
+    ladder puzzle ("Is the motor ON?"). Puzzles adapt: harder after 3 right
+    in a row, easier after 2 misses. Then the computer takes its turn. Ladders climb up;
+    "short circuits" (the snakes) zap you back down. First to 30 wins.
+  COMPUTER: two dice (move + skill), same 3-try rule as the player (chance +20% per retry),
+    wild card every 3rd turn,
+    puzzle size by level (3 / 5 / 10 rungs). Its puzzle is shown so the player can follow.
+  TAGS (search for them): [CSS-TOKENS] [CSS-BOARD] [CSS-PANEL] [CSS-COMPUTER] [HTML-BOARD]
+    [HTML-PANEL] [JS-BOARD] [JS-RULES] [JS-LOGIC] [JS-PUZZLES] [JS-TIERS] [JS-ADAPT] [JS-CPU-PUZZLE] [JS-LADDER-DRAW]
+    [JS-GAME] [JS-COMPUTER] [JS-DRAW-BOARD] [JS-INIT]
+  RULES KEPT: only standard contacts and coils; drawing matches the logic.
+  ----------------------------------------------------------------------
+  CITADEL NOTE (v0.5.0): this is a STANDALONE game from Ariet's PLC course,
+    kept exactly as Ariet made it. It is an exception to the Citadel's
+    rules: no coins, skill areas, mastery, question bank or trophies, its
+    own look and fonts, and the SolidMind PLC I/O and naming rules don't
+    apply to it. The only Citadel additions are:
+      [HTML-BACK]    a back button to the Nexus (keeps the hero in the address)
+      [HTML-FOOTER]  the Citadel version footer ([VERSION])
+      [CSS-CITADEL]  the small styles for those two
+    It is reached only from nexus.html, for heroes with "Nexus access" on.
+  ======================================================================
+-->
+<style>
+/* [CSS-TOKENS] Bright playful look on purpose (single light theme). Change colors here.
+   --you = player piece, --cpu = computer piece, --on = power / correct, --zap = short circuit / wrong. */
+:root{
+  --bg:#e8f3ff; --card:#ffffff; --ink:#1b2a4a; --muted:#5d6f8f; --line:#c9d9ef;
+  --you:#2f6fed; --cpu:#f07a1a; --on:#1fae5b; --on-soft:#d6f5e3; --zap:#e23d4b; --zap-soft:#fde2e5;
+  --ladder:#e0a417; --sq1:#ffffff; --sq2:#f2f7ff;
+  --f-display:"Baloo 2",system-ui,sans-serif; --f-body:"Nunito",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,monospace;
+  color-scheme:light;
+}
+html,body{background:var(--bg);color:var(--ink);margin:0}
+body{font-family:var(--f-body);font-size:16px;line-height:1.45}
+*{box-sizing:border-box}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 30px;max-width:1280px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 16px;margin-bottom:12px}
+header h1{font-family:var(--f-display);font-size:34px;margin:0;line-height:1}
+header h1 span{color:var(--cpu)}
+header p{margin:0;color:var(--muted);font-weight:700}
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+/* [CSS-BOARD] Board card and the score chips above it. */
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:14px;min-width:0}
+.players{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.chip{display:flex;align-items:center;gap:8px;padding:6px 12px;border-radius:99px;border:2px solid var(--line);font-weight:800}
+.chip i{width:18px;height:18px;border-radius:50%;display:inline-block}
+.chip.turn{border-color:var(--ink);box-shadow:0 3px 0 var(--ink)}
+.chip b{font-family:var(--f-mono);font-size:14px}
+#board svg{display:block;width:100%;height:auto}
+.legend{display:flex;gap:16px;flex-wrap:wrap;color:var(--muted);font-size:14px;font-weight:700;margin-top:8px}
+/* [CSS-PANEL] Right panel: turn message, dice, puzzle, answers. */
+.status{font-family:var(--f-display);font-size:24px;line-height:1.15;margin:0 0 6px}
+.sub{color:var(--muted);font-weight:700;margin:0 0 10px}
+.dicebox{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.die{width:78px;height:78px;border-radius:16px;background:#fff;border:3px solid var(--ink);box-shadow:0 4px 0 var(--ink);display:grid;grid-template:repeat(3,1fr)/repeat(3,1fr);padding:9px;flex:none}
+.die span{width:14px;height:14px;border-radius:50%;background:var(--ink);place-self:center;visibility:hidden}
+.die span.v{visibility:visible}
+.die.cpu span{background:var(--cpu)}
+.die.roll{animation:wob .12s linear infinite}
+@keyframes wob{25%{transform:rotate(-8deg)}75%{transform:rotate(8deg)}}
+.btn{font-family:var(--f-display);font-size:22px;font-weight:800;border:3px solid var(--ink);background:var(--cpu);color:#fff;border-radius:14px;padding:8px 22px;cursor:pointer;box-shadow:0 4px 0 var(--ink)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.blue{background:var(--you)}
+.tries{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0 2px;align-items:center;font-weight:800;color:var(--muted)}
+.tries i{width:22px;height:22px;border-radius:50%;border:3px solid var(--you);display:inline-block}
+.tries i.used{background:var(--zap);border-color:var(--zap)}
+.tries i.left{background:var(--you)}
+.puzzle{margin-top:12px;border-top:2px dashed var(--line);padding-top:12px}
+.puzzle h3{font-family:var(--f-display);font-size:22px;margin:0 0 4px;line-height:1.15}
+.inputs{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
+.inp{display:flex;align-items:center;gap:8px;border:2px solid var(--line);border-radius:12px;padding:5px 10px;font-weight:800;font-size:14px}
+.inp .pb{width:20px;height:20px;border-radius:50%;border:2px solid #0003}
+.inp.on{border-color:var(--on);background:var(--on-soft)}
+.lad{overflow-x:auto;background:#f7fbff;border:2px solid var(--line);border-radius:12px;margin:6px 0}
+.lad svg{display:block;width:100%;min-width:420px;height:auto}
+.q{font-weight:800;font-size:18px;margin:8px 0}
+.answers{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.ans{font-family:var(--f-display);font-size:20px;font-weight:700;border:3px solid var(--ink);background:#fff;color:var(--ink);border-radius:12px;padding:8px 10px;cursor:pointer;box-shadow:0 3px 0 var(--ink)}
+.ans:hover{background:#f2f7ff}
+.ans.right{background:var(--on);color:#fff}
+.ans.wrong{background:var(--zap);color:#fff}
+.ans:disabled{cursor:default}
+.feedback{margin-top:10px;padding:10px 12px;border-radius:12px;font-weight:700}
+.feedback.good{background:var(--on-soft)} .feedback.bad{background:var(--zap-soft)}
+.feedback:empty{display:none}
+.log{margin-top:12px;font-size:14px;color:var(--muted);font-weight:700;max-height:110px;overflow:auto}
+.win{text-align:center;padding:10px 0}
+.win .big{font-family:var(--f-display);font-size:40px;line-height:1.05}
+.settings{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px;font-size:14px;font-weight:700;color:var(--muted)}
+.settings input,.settings select{font:700 15px var(--f-body);border:2px solid var(--line);border-radius:8px;padding:4px 8px;color:var(--ink);background:#fff;max-width:160px}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--you);outline-offset:2px}
+/* [CSS-COMPUTER] Computer's two dice (orange = move, purple = skill), chance and wild card labels,
+   and a scroll box for its long puzzles (up to 10 rungs). */
+.die.skill{border-color:#6b3fd4;box-shadow:0 4px 0 #6b3fd4} .die.skill span{background:#6b3fd4}
+.dcol{display:flex;flex-direction:column;align-items:center;gap:4px} .dcol small{font-weight:800;color:var(--muted)}
+.cpuinfo{display:flex;flex-direction:column;gap:6px}
+.chance{font-family:var(--f-display);font-size:22px;font-weight:800}
+.wild{font-weight:800;background:#efe6ff;color:#4b2a9e;border-radius:10px;padding:4px 10px}
+.lad.tall{max-height:380px;overflow:auto}
+.lvl{margin-top:8px;padding:6px 10px;border-radius:10px;background:#efe6ff;color:#4b2a9e;font-weight:800}
+@media (prefers-reduced-motion:reduce){.die.roll{animation:none}}
+/* [CSS-CITADEL] Citadel additions only: back button and version footer. */
+.citadel-back{display:inline-flex;align-items:center;min-height:44px;margin-bottom:6px;font-weight:800;color:var(--you);text-decoration:none}
+.citadel-back:hover{text-decoration:underline}
+.citadel-foot{margin-top:18px;text-align:center;color:var(--muted);font-size:13px;font-weight:700}
+</style>
+</head>
+<body>
+<div class="wrap">
+<!-- [HTML-BACK] Back to the Nexus. The script at the end adds the hero to the link. -->
+<a class="citadel-back" id="citadelBack" href="../nexus.html">&larr; Back to the Nexus</a>
+<header><h1>Ladder <span>Race</span></h1><p>Solve the ladder, climb the board, beat the computer.</p></header>
+<div class="grid">
+  <!-- [HTML-BOARD] Score chips, the 30-square board (drawn by drawBoard), and the legend. -->
+  <section class="card" aria-label="Game board">
+    <div class="players">
+      <div class="chip" id="chipYou"><i style="background:var(--you)"></i><span id="youName">You</span> · square <b id="youPos">1</b></div>
+      <div class="chip" id="chipCpu"><i style="background:var(--cpu)"></i>Computer · square <b id="cpuPos">1</b></div>
+    </div>
+    <div id="board"></div>
+    <div class="legend"><span>🟨 Ladder: climb up</span><span>⚡ Short circuit: zap down</span><span>Finish on 30</span><span id="wildInfo"></span><span id="tierInfo"></span></div>
+  </section>
+
+  <!-- [HTML-PANEL] Whose turn it is, the dice, the puzzle and the answer buttons (all filled by the game code). -->
+  <section class="card" aria-live="polite">
+    <div id="panel"></div>
+    <div class="log" id="log"></div>
+    <div class="settings">
+      <label for="name">Player name</label><input id="name" type="text" value="You" maxlength="14">
+      <label for="level">Computer puzzles</label>
+      <select id="level"><option value="easy" selected>Easy (3 rungs)</option><option value="medium">Medium (5 rungs)</option><option value="hard">Hard (10 rungs)</option></select>
+      <button class="ans" id="newGame" type="button" style="font-size:16px;padding:4px 12px">New game</button>
+    </div>
+  </section>
+</div>
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer class="citadel-foot">SolidMind Citadel · <span class="version">v0.5.0</span></footer>
+</div>
+
+<script>
+/* [HTML-BACK] Keep the hero in the back link (nexus.html?id=...), so the Nexus knows who is playing. */
+(function(){ var id = new URLSearchParams(location.search).get('id');
+  if (id) document.getElementById('citadelBack').href = '../nexus.html?id=' + encodeURIComponent(id); })();
+</script>
+<script>
+(function(){
+/* [JS-BOARD] Board size, ladders (go up) and short circuits (the "snakes", go down). */
+const FINISH = 30;
+const LADDERS = {3:10, 8:17, 14:23, 21:28};
+const ZAPS = {16:9, 24:13, 29:20};
+
+/* [JS-RULES] Computer rules (Ariet's house rules, Nov 2026).
+   LEVELS : how many rungs ("lines") the computer's puzzle has. Easy 3, Medium 5, Hard 10.
+   Two dice for the computer: MOVE die = squares it moves if it answers right;
+   SKILL die = chance it answers right (it gets ONE try): 6 = 40%, 5 = 60%, 4 = 60%, 3 = 80%,
+   2 or 1 = a random chance (10-90%).
+   WILD CARD every 3rd computer turn: if the skill die is lower than 4, it re-rolls the skill die
+   and adds +30% to the new chance (max 95%).
+   SAME TURN RULES FOR EVERYONE (Nov 12): up to MAX_TRIES tries per turn. Each wrong answer takes
+   1 off the roll. Roll reaches 0 or 3 wrong = turn lost (a roll of 2 with 2 wrong loses the turn).
+   The computer's chance goes up by RETRY_BONUS after each wrong try.
+   PLAYER LEVEL (adaptive): STREAK_UP right answers in a row = harder puzzles;
+   MISSES_DOWN wrong answers at a level = easier puzzles. Change the numbers here. */
+const LEVELS = {easy:{rungs:3, label:'Easy'}, medium:{rungs:5, label:'Medium'}, hard:{rungs:10, label:'Hard'}};
+const WILD_EVERY = 3, WILD_BONUS = 0.30, MAX_CHANCE = 0.95;
+const MAX_TRIES = 3, RETRY_BONUS = 0.20, STREAK_UP = 3, MISSES_DOWN = 2, MAX_TIER = 4;
+const TIER_NAMES = {1:'Starter', 2:'Builder', 3:'Thinker', 4:'Engineer'};
+function skillChance(n){
+  if (n === 6) return {p:0.40, txt:'40%'};
+  if (n === 5 || n === 4) return {p:0.60, txt:'60%'};
+  if (n === 3) return {p:0.80, txt:'80%'};
+  const p = Math.round((0.1 + Math.random()*0.8)*100)/100;
+  return {p, txt:`random: ${Math.round(p*100)}%`};
+}
+
+/* [JS-LOGIC] Ladder logic engine shared by every puzzle and drawing.
+   contact = {n: name, nc: true/false, q: true for a "?" piece}
+   rung    = {paths: [[contact,...], [contact,...]], coil: 'Motor'}  (paths are parallel branches)
+   solve() runs the rungs top to bottom; each coil can be used as a contact in later rungs. */
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const coin = () => Math.random() < .5;
+const shuffle = a => { a = a.slice(); for (let i=a.length-1;i>0;i--){ const j = Math.floor(Math.random()*(i+1)); [a[i],a[j]] = [a[j],a[i]]; } return a; };
+const passes = (c, st) => c.nc ? !st[c.n] : !!st[c.n];
+const rungOn = (r, st) => r.paths.some(p => p.every(c => passes(c, st)));
+function solve(rungs, inputs){ const st = {...inputs}; rungs.forEach(r => { st[r.coil] = rungOn(r, st); }); return st; }
+const NO = n => ({n}), NC = n => ({n, nc:true});
+const one = (c, coil) => ({paths:[[c]], coil});
+const series = (cs, coil) => ({paths:[cs], coil});
+const par = (cs, coil) => ({paths:cs.map(c=>[c]), coil});
+const DEVICES = ['Motor','Lamp','Fan','Horn'];
+const word = d => d.toLowerCase();
+const onOff = b => b ? 'ON' : 'OFF';
+const stateWord = (n, on) => n.startsWith('Switch') ? (on?'ON':'OFF') : (on?'pressed':'not pressed');
+const say = (n, on) => `${n} is ${stateWord(n,on)}`;
+const ynOpts = a => [{label:'ON', ok:a}, {label:'OFF', ok:!a}];
+const inList = inp => Object.entries(inp).map(([n,on])=>({n,on}));
+/* Builds an ON/OFF question about one coil, with the answer computed from the drawing. */
+function onOffQ(title, inputs, rungs, target, q, explainFn){
+  const st = solve(rungs, inputs), a = st[target];
+  return {title, inputs:inList(inputs), rungs, st, q, options:ynOpts(a), explain:explainFn(a, st)};
+}
+
+/* [JS-PUZZLES] Puzzles for the player (small, 1-3 rungs). 18 kinds, dealt from a shuffled
+   "bag" so the same kind doesn't come back until all have been used (newPuzzle). Each kind
+   also randomizes buttons, devices and states, so the exact question rarely repeats.
+   To add a puzzle: add a function that returns {title, inputs, rungs, st, q, options, explain}. */
+const PUZZLES = [
+ () => { const d = pick(DEVICES), b = pick(['Start','Button 1']), on = coin(), inp = {[b]:on};
+   return onOffQ('One button', inp, [one(NO(b), d)], d, `${say(b,on)}. Is the ${word(d)} ON or OFF?`,
+     a => `┤ ├ is a normally open contact: it lets power through only while ${b} is pressed. So the ${word(d)} is ${onOff(a)}.`); },
+ () => { const d = pick(DEVICES), on = coin(), inp = {Switch:on};
+   return onOffQ('The slash contact', inp, [one(NC('Switch'), d)], d, `${say('Switch',on)}. Is the ${word(d)} ON or OFF?`,
+     a => `┤/├ is a normally closed contact: it lets power through when the switch is OFF and blocks it when the switch is ON. So the ${word(d)} is ${onOff(a)}.`); },
+ () => { const d = pick(DEVICES), inp = {'Button 1':coin(), 'Button 2':coin()};
+   return onOffQ('Two in a row', inp, [series([NO('Button 1'),NO('Button 2')], d)], d, `Is the ${word(d)} ON or OFF?`,
+     a => `Contacts in a row are like two doors, one after the other. Power gets through only if BOTH buttons are pressed. The ${word(d)} is ${onOff(a)}.`); },
+ () => { const d = pick(DEVICES), inp = {'Button 1':coin(), 'Button 2':coin()};
+   return onOffQ('Two roads', inp, [par([NO('Button 1'),NO('Button 2')], d)], d, `Is the ${word(d)} ON or OFF?`,
+     a => `Contacts side by side are two roads to the same place. Power gets through if EITHER button is pressed. The ${word(d)} is ${onOff(a)}.`); },
+ () => { const on = coin(), inp = {Start:on}, d = pick(['Lamp','Horn','Fan']);
+   return onOffQ('Two rungs', inp, [one(NO('Start'),'Motor'), one(NO('Motor'), d)], d, `${say('Start',on)}. Is the ${word(d)} ON or OFF?`,
+     a => `Rung 1 turns the motor ${onOff(on)}. Rung 2 has a contact named Motor, so the ${word(d)} copies the motor: ${onOff(a)}.`); },
+ () => { const r = par([NO('Start'),NO('Motor')], 'Motor');
+   return {title:'The memory trick', inputs:[{n:'Start',on:false}], rungs:[r], st:{Start:false, Motor:true}, note:'Start was pressed a moment ago, then let go.',
+     q:'Start was pressed, then let go. Is the motor ON or OFF?', options:ynOpts(true),
+     explain:'When Start was pressed, the motor turned ON. The Motor contact under Start then closed and keeps the rung ON by itself, even after you let go. This is called a seal-in. The motor stays ON.'}; },
+ () => { const d = pick(DEVICES), wantNO = coin();
+   return {title:'Missing piece', inputs:[], rungs:[one({n:'Button', q:true}, d)], st:{}, noPower:true,
+     q: wantNO ? `We want the ${word(d)} ON only while the button is pressed. Which piece goes in the ? spot?` : `We want the ${word(d)} ON when the button is NOT pressed. Which piece goes in the ? spot?`,
+     options:[{label:'┤ ├  normally open', ok:wantNO}, {label:'┤/├  normally closed', ok:!wantNO}],
+     explain: wantNO ? '┤ ├ (normally open) passes power only while the button is pressed.' : '┤/├ (normally closed) passes power while the button is NOT pressed.'}; },
+ () => { const d = pick(DEVICES), s = coin(), r = s ? series([NO('Button 1'),NO('Button 2')], d) : par([NO('Button 1'),NO('Button 2')], d);
+   return {title:'What do I press?', inputs:[], rungs:[r], st:{}, noPower:true, q:`What do you need to press to turn the ${word(d)} ON?`,
+     options:[{label:'Both buttons', ok:s}, {label:'Either one', ok:!s}],
+     explain: s ? 'The contacts are in a row, so both buttons must be pressed.' : 'The contacts are side by side, so either button works.'}; },
+ () => { const d = pick(DEVICES), inp = {'Button 1':coin(), 'Switch':coin()};
+   return onOffQ('Push and slash', inp, [series([NO('Button 1'),NC('Switch')], d)], d, `Is the ${word(d)} ON or OFF?`,
+     a => `Power needs Button 1 pressed (┤ ├) AND the Switch OFF (┤/├). The ${word(d)} is ${onOff(a)}.`); },
+ () => { const d = pick(DEVICES), inp = {'Button 1':coin(), 'Button 2':coin(), 'Button 3':Math.random()<.7};
+   return onOffQ('Three in a row', inp, [series([NO('Button 1'),NO('Button 2'),NO('Button 3')], d)], d, `Is the ${word(d)} ON or OFF?`,
+     a => `Three doors in a row: all three buttons must be pressed. The ${word(d)} is ${onOff(a)}.`); },
+ () => { const d = pick(DEVICES), inp = {'Button 1':coin(), 'Switch':coin()};
+   return onOffQ('Two roads, one slash', inp, [par([NO('Button 1'),NC('Switch')], d)], d, `Is the ${word(d)} ON or OFF?`,
+     a => `Top road: Button 1 pressed. Bottom road: Switch OFF. Either road works. The ${word(d)} is ${onOff(a)}.`); },
+ () => { const on = coin(), inp = {Start:on};
+   return onOffQ('Opposite day', inp, [one(NO('Start'),'Motor'), one(NC('Motor'),'Lamp')], 'Lamp', `${say('Start',on)}. Is the lamp ON or OFF?`,
+     a => `The motor is ${onOff(on)}. Rung 2 uses ┤/├ Motor, so the lamp is the opposite of the motor: ${onOff(a)}.`); },
+ () => { const inp = {'Button 1':coin(), 'Button 2':coin()};
+   const rungs = [one(NO('Button 1'),'Lamp'), one(NO('Button 2'),'Fan')], st = solve(rungs, inp);
+   const ans = st.Lamp && st.Fan ? 'Both' : st.Lamp ? 'Only the lamp' : st.Fan ? 'Only the fan' : 'Neither';
+   return {title:'Which one turns on?', inputs:inList(inp), rungs, st, q:'What turns ON?',
+     options:['Only the lamp','Only the fan','Both','Neither'].map(l=>({label:l, ok:l===ans})),
+     explain:`Button 1 runs the lamp and Button 2 runs the fan. Answer: ${ans.toLowerCase()}.`}; },
+ () => { const d = pick(DEVICES), first = coin(), inp = {'Button 1':first, 'Button 2':!first}, need = first ? 'Button 2' : 'Button 1';
+   return {title:'One more press', inputs:inList(inp), rungs:[series([NO('Button 1'),NO('Button 2')], d)], st:inp, q:`The ${word(d)} is OFF. Which button do you still need to press?`,
+     options:[{label:'Button 1', ok:need==='Button 1'}, {label:'Button 2', ok:need==='Button 2'}],
+     explain:`Both contacts are in a row. ${first?'Button 1':'Button 2'} is already pressed, so you still need ${need}.`}; },
+ () => ({title:'Who keeps it on?', inputs:[{n:'Start',on:false}], rungs:[par([NO('Start'),NO('Motor')],'Motor')], st:{Start:false, Motor:true},
+     note:'The motor is running and Start has been let go.', q:'What is keeping the motor ON?',
+     options:[{label:'The Motor contact', ok:true}, {label:'The Start button', ok:false}],
+     explain:'Start is let go, so its contact is open. The Motor contact on the lower road is closed because the motor is ON, so it keeps the rung powered.'}),
+ () => { const nc = coin(), d = pick(DEVICES);
+   return {title:'True or false', inputs:[], rungs:[one(nc?NC('Button'):NO('Button'), d)], st:{}, noPower:true,
+     q:`True or false: this contact lets power through while the button is pressed.`,
+     options:[{label:'True', ok:!nc}, {label:'False', ok:nc}],
+     explain: nc ? 'False. This is ┤/├ (normally closed). Pressing the button opens it and blocks power.' : 'True. This is ┤ ├ (normally open). Pressing the button closes it and lets power through.'}; },
+ () => { const n = pick([2,3]), d = pick(DEVICES), cs = Array.from({length:n},(_,i)=>NO('Button '+(i+1)));
+   return {title:'How many presses?', inputs:[], rungs:[series(cs, d)], st:{}, noPower:true, q:`How many buttons must be pressed to turn the ${word(d)} ON?`,
+     options:[1,2,3].map(k=>({label:String(k), ok:k===n})), explain:`There are ${n} contacts in a row, so all ${n} buttons must be pressed.`}; },
+ () => { const on = Math.random()<.65, inp = {Start:on};
+   return onOffQ('Chain reaction', inp, [one(NO('Start'),'Motor'), one(NO('Motor'),'Fan'), one(NO('Fan'),'Lamp')], 'Lamp', `${say('Start',on)}. Is the lamp ON or OFF?`,
+     a => `Follow the chain: Start → Motor → Fan → Lamp. Each rung copies the one above, so the lamp is ${onOff(a)}.`); }
+];
+/* [JS-TIERS] Which puzzles belong to each player level. Numbers = position in PUZZLES above
+   (0 = One button ... 17 = Chain reaction). 'big2'..'big5' = a generated program with that many rungs.
+   Level 1 Starter: one idea at a time. 2 Builder: two ideas or two rungs. 3 Thinker: chains.
+   4 Engineer: longer programs. Each level has its own shuffled bag so kinds don't repeat. */
+const TIERS = {1:[0,1,2,3,6,7,15,16], 2:[4,5,8,9,10,11,12,13,14], 3:[17,11,12,'big2','big2','big3'], 4:['big3','big3','big4','big4','big5']};
+const bags = {};
+function newPuzzle(tier){
+  if (!bags[tier] || !bags[tier].length) bags[tier] = shuffle(TIERS[tier]);
+  const k = bags[tier].pop();
+  return typeof k === 'number' ? PUZZLES[k]() : bigPuzzle(+k.slice(3));
+}
+
+/* [JS-CPU-PUZZLE] The computer's puzzle: a longer program (3, 5 or 10 rungs by level).
+   Each rung uses 1-2 contacts (in a row or side by side, NO or NC) taken from the inputs or from
+   coils above it, so you must follow the program top to bottom. Question = the last coil. */
+function bigPuzzle(n){
+  const ins = ['Start','Button 1','Button 2','Switch'], inputs = {};
+  ins.forEach(k => inputs[k] = coin()); if (!Object.values(inputs).some(Boolean)) inputs.Start = true;
+  const names = shuffle(['Motor','Lamp','Fan','Horn','Pump','Valve','Bell','Buzzer','Heater','Conveyor']).slice(0, n);
+  const rungs = names.map((coil, i) => {
+    const prev = names.slice(0, i);
+    const src = () => (prev.length && Math.random() < .6) ? pick(prev) : pick(ins);
+    const mk = () => Math.random() < .3 ? NC(src()) : NO(src());
+    const first = (i > 0 && Math.random() < .75) ? (Math.random() < .3 ? NC(prev[prev.length-1]) : NO(prev[prev.length-1])) : mk();
+    const shape = Math.random();
+    let r = shape < .4 ? one(first, coil) : shape < .7 ? series([first, mk()], coil) : par([first, mk()], coil);
+    if (r.paths.flat().length === 2 && r.paths.flat()[0].n === r.paths.flat()[1].n) r = one(first, coil);
+    return r;
+  });
+  const target = names[names.length-1], st = solve(rungs, inputs);
+  return {title:`${n}-rung program`, inputs:inList(inputs), rungs, st, q:`Is the ${word(target)} ON or OFF?`, target, options:ynOpts(st[target]),
+    explain:`Start at rung 1 and work down. Each coil you figure out can be used as a contact in the rungs below it. The ${word(target)} is ${onOff(st[target])}.`};
+}
+
+/* [JS-LADDER-DRAW] Draws any number of rungs as SVG. reveal = true turns powered wires and
+   closed contacts green, so you SEE why the answer is right. Drawing and answer use the same st. */
+function drawLadder(pz, reveal){
+  const ON = '#1fae5b', OFF = '#8aa0bf', INK = '#1b2a4a';
+  const rows = pz.rungs.reduce((n,r)=>n + r.paths.length, 0);
+  const H = 40 + rows*70 + (pz.rungs.length-1)*20, W = 540, L = 24, R = 520, CX = 440;
+  let y = 60, s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ladder logic, ${pz.rungs.length} rungs">`;
+  s += `<line x1="${L}" y1="20" x2="${L}" y2="${H-14}" stroke="${reveal&&!pz.noPower?ON:INK}" stroke-width="5"/><line x1="${R}" y1="20" x2="${R}" y2="${H-14}" stroke="${INK}" stroke-width="5"/>`;
+  pz.rungs.forEach((r, ri) => {
+    const pw = reveal && !pz.noPower, coilOn = pw && !!pz.st[r.coil];
+    const maxLen = Math.max(...r.paths.map(p=>p.length)), joinX = 74 + maxLen*110;
+    r.paths.forEach((p, pi) => {
+      const py = y + pi*70; let x = L, live = pw;
+      if (pi > 0) s += `<line x1="${L+30}" y1="${y}" x2="${L+30}" y2="${py}" stroke="${pw?ON:OFF}" stroke-width="3"/>`;
+      if (pi > 0) x = L+30;
+      p.forEach((c, ci) => {
+        const cx = 74 + ci*110;
+        s += `<line x1="${x}" y1="${py}" x2="${cx}" y2="${py}" stroke="${live?ON:OFF}" stroke-width="3"/>`;
+        const pass = pw && !c.q && passes(c, pz.st), col = c.q ? '#e0a417' : pass ? ON : INK;
+        if (c.q) s += `<rect x="${cx}" y="${py-18}" width="36" height="36" rx="6" fill="#fff6d6" stroke="${col}" stroke-width="3" stroke-dasharray="5 4"/><text x="${cx+18}" y="${py+8}" text-anchor="middle" font-family="Baloo 2,sans-serif" font-size="24" font-weight="800" fill="${col}">?</text>`;
+        else {
+          s += `<line x1="${cx+8}" y1="${py-16}" x2="${cx+8}" y2="${py+16}" stroke="${col}" stroke-width="4"/><line x1="${cx+28}" y1="${py-16}" x2="${cx+28}" y2="${py+16}" stroke="${col}" stroke-width="4"/>`;
+          if (c.nc) s += `<line x1="${cx+2}" y1="${py+16}" x2="${cx+34}" y2="${py-16}" stroke="${col}" stroke-width="3"/>`;
+        }
+        s += `<text x="${cx+18}" y="${py-24}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="14" font-weight="800" fill="${INK}">${c.n}</text>`;
+        live = live && !c.q && passes(c, pz.st); x = cx + 36;
+      });
+      s += `<line x1="${x}" y1="${py}" x2="${joinX}" y2="${py}" stroke="${live?ON:OFF}" stroke-width="3"/>`;
+      if (pi > 0) s += `<line x1="${joinX}" y1="${y}" x2="${joinX}" y2="${py}" stroke="${coilOn?ON:OFF}" stroke-width="3"/>`;
+    });
+    s += `<line x1="${joinX}" y1="${y}" x2="${CX-20}" y2="${y}" stroke="${coilOn?ON:OFF}" stroke-width="3"/>`;
+    s += `${coilOn?`<circle cx="${CX}" cy="${y}" r="20" fill="#1fae5b33"/>`:''}<path d="M${CX-8} ${y-16} A20 20 0 0 0 ${CX-8} ${y+16}" fill="none" stroke="${coilOn?ON:INK}" stroke-width="4"/><path d="M${CX+8} ${y-16} A20 20 0 0 1 ${CX+8} ${y+16}" fill="none" stroke="${coilOn?ON:INK}" stroke-width="4"/>`;
+    s += `<text x="${CX}" y="${y-26}" text-anchor="middle" font-family="Nunito,sans-serif" font-size="14" font-weight="800" fill="${INK}">${r.coil}</text>`;
+    s += `<line x1="${CX+20}" y1="${y}" x2="${R}" y2="${y}" stroke="${coilOn?ON:OFF}" stroke-width="3"/>`;
+    s += `<text x="${L-8}" y="${y+5}" text-anchor="end" font-family="Nunito,sans-serif" font-size="12" fill="#5d6f8f">${ri+1}</text>`;
+    y += r.paths.length*70 + 20;
+  });
+  return s + '</svg>';
+}
+const inputsHtml = pz => pz.inputs.length ? `<div class="inputs">${pz.inputs.map(i=>`<span class="inp${i.on?' on':''}"><span class="pb" style="background:${i.on?'#1fae5b':'#d6dde8'}"></span>${i.n}: ${stateWord(i.n,i.on)}</span>`).join('')}</div>` : '';
+
+/* [JS-GAME] Game state and the player's turn.
+   Player: Roll -> move = roll -> up to 3 tries, each a NEW puzzle at the player's current level ->
+   right answer moves the remaining squares -> each wrong answer takes 1 off the move ->
+   move hits 0 or 3 wrong = turn lost -> computer's turn. */
+let G;
+const $ = id => document.getElementById(id);
+const esc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const name = () => ($('name').value.trim() || 'You');
+const level = () => LEVELS[$('level').value];
+function addLog(t){ const d = document.createElement('div'); d.textContent = t; $('log').prepend(d); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const PIPS = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const dieHtml = (n, kind, rolling) => `<div class="die ${kind||''}${rolling?' roll':''}" aria-label="Dice shows ${n||'nothing yet'}">${Array.from({length:9},(_,i)=>`<span class="${n && PIPS[n].includes(i)?'v':''}"></span>`).join('')}</div>`;
+async function rollAnim(slot, kind){
+  for (let i=0;i<10;i++){ $(slot).innerHTML = dieHtml(1+Math.floor(Math.random()*6), kind, true); await sleep(70); }
+  const n = 1 + Math.floor(Math.random()*6); $(slot).innerHTML = dieHtml(n, kind, false); return n;
+}
+
+function newGame(){
+  G = {you:1, cpu:1, turn:'you', phase:'roll', dice:0, move:0, wrong:0, pz:null, answered:false, over:false, cpuTurns:0, tier:1, streak:0, misses:0};
+  for (const k in bags) delete bags[k]; $('log').innerHTML = ''; addLog(`New game! Computer level: ${level().label} (${level().rungs}-rung puzzles).`);
+  render(); drawBoard();
+}
+
+function render(){
+  $('youName').textContent = name(); $('youPos').textContent = G.you; $('cpuPos').textContent = G.cpu;
+  $('chipYou').classList.toggle('turn', G.turn==='you' && !G.over);
+  $('chipCpu').classList.toggle('turn', G.turn==='cpu' && !G.over);
+  const left = WILD_EVERY - (G.cpuTurns % WILD_EVERY);
+  $('wildInfo').textContent = left === 1 ? 'Computer wild card: NEXT turn' : `Computer wild card in ${left} turns`;
+  $('tierInfo').innerHTML = `Your puzzle level: <b><span style="color:#e0a417">${'★'.repeat(G.tier)}</span><span style="color:#c9d9ef">${'★'.repeat(MAX_TIER-G.tier)}</span> ${TIER_NAMES[G.tier]}</b>`;
+  const p = $('panel');
+  if (G.over){
+    const youWon = G.over === 'you';
+    p.innerHTML = `<div class="win"><div class="big">${youWon ? `${esc(name())} wins! 🏆` : 'Computer wins!'}</div>
+      <p class="sub">${youWon ? 'You out-solved the computer.' : 'So close! Every puzzle you solved made you a better ladder thinker.'}</p>
+      <button class="btn blue" id="again" type="button">Play again</button></div>`;
+    $('again').onclick = newGame; return;
+  }
+  if (G.turn === 'cpu') return; // the computer's panel is drawn by cpuTurn()
+  if (G.phase === 'roll'){
+    p.innerHTML = `<p class="status">${esc(name())}, your turn!</p><p class="sub">Roll the dice. Solve the puzzle to move that many squares. Each wrong answer takes 1 square off your roll, and you get up to 3 tries.</p>
+      <div class="dicebox"><div id="dieSlot">${dieHtml(0)}</div><button class="btn" id="roll" type="button">Roll</button></div>`;
+    $('roll').onclick = async () => {
+      $('roll').disabled = true; G.dice = await rollAnim('dieSlot');
+      G.move = G.dice; G.wrong = 0; G.phase = 'puzzle'; G.pz = newPuzzle(G.tier); G.answered = false;
+      addLog(`${name()} rolled ${G.dice}.`); render();
+    };
+    return;
+  }
+  const pz = G.pz;
+  const dots = Array.from({length:MAX_TRIES},(_,i)=>`<i class="${i<G.wrong?'used':''}"></i>`).join('');
+  p.innerHTML = `<div class="dicebox"><div id="dieSlot">${dieHtml(G.dice)}</div><div><p class="status" style="margin:0" id="winTo">Win to move ${G.move}</p><div class="tries">Tries: ${dots}</div></div></div>
+    <div class="puzzle"><h3>${pz.title}</h3>${pz.note?`<p class="sub" style="margin:0">${pz.note}</p>`:''}${inputsHtml(pz)}
+      <div class="lad" id="lad">${drawLadder(pz, false)}</div>
+      <p class="q">${pz.q}</p>
+      <div class="answers">${pz.options.map((o,i)=>`<button class="ans" type="button" data-i="${i}">${o.label}</button>`).join('')}</div>
+      <div class="feedback" id="fb"></div><div id="next" style="margin-top:10px"></div></div>`;
+  p.querySelectorAll('.ans').forEach(b => b.onclick = () => answer(+b.dataset.i));
+}
+
+/* [JS-ADAPT] Player level goes up after STREAK_UP right answers in a row and down after
+   MISSES_DOWN wrong answers at the same level. Returns a message to show, or ''. */
+function adapt(ok){
+  if (ok){ G.streak++; if (G.streak >= STREAK_UP && G.tier < MAX_TIER){ G.tier++; G.streak = 0; G.misses = 0; return `⬆ Great streak! Puzzles move up to level ${G.tier} (${TIER_NAMES[G.tier]}).`; } }
+  else { G.streak = 0; G.misses++; if (G.misses >= MISSES_DOWN && G.tier > 1){ G.tier--; G.misses = 0; return `⬇ Let's make it a little easier: back to level ${G.tier} (${TIER_NAMES[G.tier]}). Build back up!`; } }
+  return '';
+}
+function answer(i){
+  if (G.answered) return; G.answered = true;
+  const pz = G.pz, ok = pz.options[i].ok;
+  $('panel').querySelectorAll('.ans').forEach((b,k) => { b.disabled = true; if (pz.options[k].ok) b.classList.add('right'); else if (k===i) b.classList.add('wrong'); });
+  $('lad').innerHTML = drawLadder(pz, true);
+  const fb = $('fb'), lvl = adapt(ok), lvlHtml = lvl ? `<div class="lvl">${lvl}</div>` : '';
+  if (lvl) addLog(lvl);
+  if (ok){
+    fb.className = 'feedback good'; fb.innerHTML = `<b>Yes!</b> ${pz.explain}${lvlHtml}`;
+    addLog(`${name()} solved "${pz.title}" and moves ${G.move}.`);
+    $('next').innerHTML = `<button class="btn blue" id="go" type="button">Move ${G.move} ${G.move===1?'square':'squares'}</button>`;
+    $('go').onclick = async () => { $('go').disabled = true; await move('you', G.move); endTurn(); };
+  } else {
+    G.wrong++; G.move--;
+    $('panel').querySelectorAll('.tries i')[G.wrong-1].classList.add('used');
+    const lost = G.move <= 0 || G.wrong >= MAX_TRIES;
+    $('winTo').textContent = lost ? 'Turn lost' : `Win to move ${G.move}`;
+    fb.className = 'feedback bad';
+    fb.innerHTML = `<b>Not this time.</b> ${pz.explain}<br><b>−1 square:</b> ${lost ? (G.move<=0 ? 'your roll is used up, so you lose this turn.' : 'that was your 3rd miss, so you lose this turn.') : `you can still move ${G.move} if you get the next one.`}${lvlHtml}`;
+    if (!lost){
+      $('next').innerHTML = `<button class="btn blue" id="go" type="button">Next try (${MAX_TRIES-G.wrong} left)</button>`;
+      $('go').onclick = () => { G.pz = newPuzzle(G.tier); G.answered = false; render(); };
+    } else {
+      addLog(`${name()} lost the turn and stays on ${G.you}.`);
+      $('next').innerHTML = `<button class="btn blue" id="go" type="button">Computer's turn</button>`;
+      $('go').onclick = endTurn;
+    }
+  }
+}
+
+/* Moves a piece one square at a time, then applies a ladder or a short circuit. */
+async function move(who, n){
+  for (let k=0;k<n;k++){ G[who] = Math.min(FINISH, G[who]+1); drawBoard(); posOnly(); await sleep(220); if (G[who] === FINISH) break; }
+  const at = G[who], who2 = who==='you' ? name() : 'Computer';
+  if (LADDERS[at]){ await sleep(250); G[who] = LADDERS[at]; addLog(`${who2} found a ladder: ${at} → ${G[who]}! 🪜`); }
+  else if (ZAPS[at]){ await sleep(250); G[who] = ZAPS[at]; addLog(`Zap! ${who2} hit a short circuit: ${at} → ${G[who]}. ⚡`); }
+  drawBoard(); posOnly();
+}
+function posOnly(){ $('youPos').textContent = G.you; $('cpuPos').textContent = G.cpu; }
+
+function endTurn(){
+  if (G.you >= FINISH){ G.over = 'you'; addLog(`${name()} reached ${FINISH} and wins!`); render(); drawBoard(); return; }
+  if (G.turn === 'you'){ G.turn = 'cpu'; render(); cpuTurn(); }
+  else { G.turn = 'you'; G.phase = 'roll'; render(); }
+}
+
+/* [JS-COMPUTER] Computer's turn, shown on screen so the player can follow along. Same turn rules
+   as the player: 1) roll MOVE die and SKILL die  2) wild card every 3rd turn (re-roll skill if
+   under 4, +30%)  3) up to 3 tries, each a new puzzle (3/5/10 rungs by level)  4) each wrong try
+   takes 1 off the move and adds RETRY_BONUS to its chance  5) move 0 or 3 wrong = turn lost
+   6) real answer revealed in green every time  7) player presses "Your turn". */
+async function cpuTurn(){
+  G.cpuTurns++;
+  const wild = G.cpuTurns % WILD_EVERY === 0, lv = level();
+  $('wildInfo').textContent = wild ? 'Computer wild card: THIS turn' : `Computer wild card in ${WILD_EVERY - (G.cpuTurns % WILD_EVERY)} turns`;
+  $('panel').innerHTML = `<p class="status">Computer's turn</p>
+    <div class="dicebox">
+      <div class="dcol"><div id="mvSlot">${dieHtml(0,'cpu')}</div><small>Move</small></div>
+      <div class="dcol"><div id="skSlot">${dieHtml(0,'skill')}</div><small>Skill</small></div>
+      <div class="cpuinfo"><div id="chance" class="chance">Chance: ?</div><div class="tries" id="cTries">Tries: ${'<i></i>'.repeat(MAX_TRIES)}</div>${wild?'<div class="wild">🃏 Wild card turn!</div>':''}</div>
+    </div>
+    <p class="sub" id="cpuMsg" style="margin-top:10px">Rolling…</p>
+    <div class="puzzle" id="cpuPz" hidden></div><div id="next" style="margin-top:10px"></div>`;
+  await sleep(400);
+  let mv = await rollAnim('mvSlot','cpu'); G.dice = mv;
+  let s = await rollAnim('skSlot','skill'), ch = skillChance(s), p = ch.p;
+  $('chance').textContent = `Chance: ${ch.txt}`;
+  $('cpuMsg').textContent = `Move die: ${mv}. Skill die: ${s} → ${ch.txt} chance on the first try.`;
+  if (wild){
+    await sleep(900);
+    if (s < 4){
+      $('cpuMsg').textContent = `Wild card! Skill die was ${s} (under 4), so it re-rolls and gets +30%.`; await sleep(900);
+      s = await rollAnim('skSlot','skill'); const c2 = skillChance(s);
+      p = Math.min(MAX_CHANCE, c2.p + WILD_BONUS);
+      $('chance').textContent = `Chance: ${Math.round(p*100)}% (wild)`;
+      $('cpuMsg').textContent = `New skill die: ${s} → ${c2.txt} + 30% = ${Math.round(p*100)}%.`;
+      addLog(`Computer used its wild card: skill re-roll ${s}, chance ${Math.round(p*100)}%.`);
+    } else { $('cpuMsg').textContent += ' Wild card not needed (skill die is 4 or more).'; }
+  }
+  await sleep(900);
+  const think = lv.rungs >= 10 ? 3200 : lv.rungs >= 5 ? 2500 : 1800;
+  let wrong = 0, solved = false;
+  while (!solved && wrong < MAX_TRIES && mv > 0){
+    const pz = bigPuzzle(lv.rungs), box = $('cpuPz'); box.hidden = false;
+    box.innerHTML = `<h3>Computer's try ${wrong+1}: ${pz.title}</h3>${inputsHtml(pz)}<div class="lad tall" id="cpuLad">${drawLadder(pz,false)}</div>
+      <p class="q">${pz.q}</p><div class="answers">${pz.options.map((o,i)=>`<button class="ans" type="button" disabled data-i="${i}">${o.label}</button>`).join('')}</div>
+      <div class="feedback" id="cfb"></div>`;
+    $('chance').textContent = `Chance: ${Math.round(p*100)}%`;
+    $('cpuMsg').textContent = `Try ${wrong+1}: the computer is reading the program… can you solve it too?`;
+    await sleep(think);
+    const right = Math.random() < p, okIdx = pz.options.findIndex(o=>o.ok), pickIdx = right ? okIdx : 1-okIdx;
+    const btns = box.querySelectorAll('.ans');
+    btns[pickIdx].classList.add(right ? 'right' : 'wrong'); if (!right) btns[okIdx].classList.add('right');
+    $('cpuLad').innerHTML = drawLadder(pz, true);
+    const cfb = $('cfb');
+    if (right){
+      solved = true;
+      cfb.className = 'feedback good'; cfb.innerHTML = `<b>Computer got it right.</b> The ${word(pz.target)} is ${onOff(pz.st[pz.target])}. Follow the green to check it.`;
+      addLog(`Computer rolled ${G.dice}, solved on try ${wrong+1}, moves ${mv}.`);
+      $('cpuMsg').textContent = `Right answer! Moving ${mv}.`; await sleep(1300); await move('cpu', mv);
+    } else {
+      wrong++; mv--; p = Math.min(MAX_CHANCE, p + RETRY_BONUS);
+      $('cTries').querySelectorAll('i')[wrong-1].classList.add('used');
+      const lost = mv <= 0 || wrong >= MAX_TRIES;
+      cfb.className = 'feedback bad'; cfb.innerHTML = `<b>Computer got it wrong!</b> It said ${pz.options[pickIdx].label}, but the ${word(pz.target)} is ${onOff(pz.st[pz.target])}. −1 square. ${lost ? 'It loses this turn.' : `It can still move ${mv}, and its chance goes up to ${Math.round(p*100)}%.`}`;
+      $('cpuMsg').textContent = lost ? 'The computer loses its turn.' : `Wrong. Next try in a moment (chance now ${Math.round(p*100)}%)…`;
+      if (lost) addLog(`Computer rolled ${G.dice} but lost its turn. Stays on ${G.cpu}.`);
+      else await sleep(think);
+    }
+  }
+  if (G.cpu >= FINISH){ G.over = 'cpu'; addLog('Computer reached 30 and wins.'); render(); drawBoard(); return; }
+  $('next').innerHTML = `<button class="btn blue" id="go" type="button">${esc(name())}'s turn →</button>`;
+  $('go').onclick = endTurn;
+}
+
+/* [JS-DRAW-BOARD] 6 x 5 board numbered in a zigzag from bottom-left (1) to top-right (30).
+   Ladders = yellow rails with rungs; short circuits = red zigzag wires with a spark. */
+const C = 6, RW = 5, S = 80;
+function sqXY(n){ const i = n-1, row = Math.floor(i/C), col = row%2===0 ? i%C : C-1-(i%C); return [col*S + S/2, (RW-1-row)*S + S/2]; }
+function drawBoard(){
+  let s = `<svg viewBox="0 0 ${C*S} ${RW*S}" role="img" aria-label="Board: you on ${G.you}, computer on ${G.cpu}">`;
+  for (let n=1;n<=FINISH;n++){
+    const [x,y] = sqXY(n);
+    s += `<rect x="${x-S/2+2}" y="${y-S/2+2}" width="${S-4}" height="${S-4}" rx="10" fill="${n===FINISH?'#ffe9b0':(n%2?'#ffffff':'#eef5ff')}" stroke="#c9d9ef" stroke-width="2"/>`;
+    s += `<text x="${x-S/2+10}" y="${y-S/2+22}" font-family="Baloo 2,sans-serif" font-size="17" font-weight="800" fill="#7d8fae">${n}</text>`;
+  }
+  const [fx,fy] = sqXY(FINISH); s += `<text x="${fx}" y="${fy+16}" text-anchor="middle" font-size="26">🏁</text>`;
+  for (const [a,b] of Object.entries(LADDERS)){
+    const [x1,y1] = sqXY(+a), [x2,y2] = sqXY(b), dx = x2-x1, dy = y2-y1, len = Math.hypot(dx,dy), ox = -dy/len*9, oy = dx/len*9;
+    s += `<g opacity=".92"><line x1="${x1+ox}" y1="${y1+oy}" x2="${x2+ox}" y2="${y2+oy}" stroke="#e0a417" stroke-width="5" stroke-linecap="round"/><line x1="${x1-ox}" y1="${y1-oy}" x2="${x2-ox}" y2="${y2-oy}" stroke="#e0a417" stroke-width="5" stroke-linecap="round"/>`;
+    const k = Math.floor(len/22); for (let i=1;i<k;i++){ const t = i/k, cx = x1+dx*t, cy = y1+dy*t; s += `<line x1="${cx+ox}" y1="${cy+oy}" x2="${cx-ox}" y2="${cy-oy}" stroke="#e0a417" stroke-width="4"/>`; } s += `</g>`;
+  }
+  for (const [a,b] of Object.entries(ZAPS)){
+    const [x1,y1] = sqXY(+a), [x2,y2] = sqXY(b), steps = 8, len = Math.hypot(x2-x1,y2-y1); let d = `M${x1} ${y1}`;
+    for (let i=1;i<=steps;i++){ const t = i/steps, cx = x1+(x2-x1)*t, cy = y1+(y2-y1)*t, w = i===steps?0:(i%2?10:-10); d += ` L${cx + (-(y2-y1)/len)*w} ${cy + ((x2-x1)/len)*w}`; }
+    s += `<path d="${d}" fill="none" stroke="#e23d4b" stroke-width="4" stroke-linejoin="round" opacity=".85"/><text x="${x1}" y="${y1+9}" text-anchor="middle" font-size="22">⚡</text>`;
+  }
+  const piece = (n, col, off) => { const [x,y] = sqXY(n); return `<circle cx="${x+off}" cy="${y+12}" r="14" fill="${col}" stroke="#1b2a4a" stroke-width="3"/>`; };
+  s += piece(G.cpu, '#f07a1a', G.cpu===G.you?10:0) + piece(G.you, '#2f6fed', G.cpu===G.you?-10:0);
+  $('board').innerHTML = s + '</svg>';
+}
+
+/* [JS-INIT] Wire up settings and start the first game. Changing the level applies from the
+   computer's next puzzle. */
+$('name').oninput = () => { $('youName').textContent = name(); };
+$('level').onchange = () => addLog(`Computer level is now ${level().label} (${level().rungs}-rung puzzles).`);
+$('newGame').onclick = newGame;
+newGame();
+})();
+</script>
+
+</body>
+</html>
