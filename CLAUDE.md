@@ -51,7 +51,8 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
    - "Who enters the Citadel?" hero screen: each kid picks a nickname, a crest and a color
    - Level per hero (Level 1 / 2 / 3) set by the parent, not by age
    - Gold coins per hero, earned in games
-   - Ranks: Apprentice → Squire → Knight → Engineer → Master Engineer
+   - Ranks: Apprentice → Squire → Knight → Engineer → Master Engineer, each with
+     Bronze / Silver / Gold tiers, moved up only by passing tests (see "Rank ladder and tests")
    - **The Treasury:** parent area behind a PIN to set levels, view coins and approve rewards.
      A browser PIN is only a gate for kids, not real security; say so in code comments.
 2. **First games:** 3–4 games, one or two per hall, all using `citadel-core.js`.
@@ -97,6 +98,55 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   PLC rung alone as an emergency stop.
 - Virtual controller I/O never exceeds 8 DI, 4 DO, 2 AI, 2 AO, 2 RTD.
 
+## Rank ladder and tests (permanent rules, built in v0.2.0)
+
+- 5 ranks (Apprentice, Squire, Knight, Engineer, Master Engineer) × 3 tiers
+  (Bronze, Silver, Gold) = 15 steps. Everyone starts at **Apprentice – Bronze**.
+- Moving up one tier always needs a passed test: Bronze → Silver, Silver → Gold, and
+  Gold → next rank's Bronze (the **promotion test**). 14 tests in all.
+- **Ranks never go up from coins alone.** Show rank and tier (e.g. "Squire – Silver") with a
+  bronze, silver or gold badge on the hero card and hero page.
+- Test rules:
+  1. Each test has a coin amount. With at least that many coins the test unlocks. The kid
+     chooses when to take it; it never starts by itself.
+  2. Pass mark 75%. Pass = keep all coins, move up one tier.
+  3. Fail = lose half of that test's coin amount (rounded down; test 50 → lose 25).
+  4. After a first fail: one retake only, and only with at least the test's coin amount.
+  5. Fail the retake = the test locks. To unlock, the hero must reach **90%** in each
+     **weak area** of that retake, in that area's game. A weak area is an area scored
+     **under 75%** on the retake. Only results earned after the lock count. Once all are
+     mastered the test resets to a fresh test (needs the coins again, first try + one retake).
+  6. While a hero has a test ready, failed once, or locked for mastery, no NEW games or
+     challenges unlock for that hero (`Citadel.newGamesAllowed`). Games they already have
+     still work. A game that teaches a weak area must stay playable, or the hero gets stuck.
+- An **area** is one specific lesson or skill, not a hall or subject (e.g. "adding within 10",
+  "multiplying multi-digit numbers", "latch circuits", "turn a light on/off with a switch").
+  Every test question is tagged with exactly one area. Mastering one area never counts toward
+  another.
+- Each game defines how its 90% is measured (e.g. 9 of 10 wins against the computer, or 90%
+  accuracy) and reports it with `Citadel.reportAreaScore(heroId, areaId, percent)`.
+- Real tests call `Citadel.finishTest(heroId, answers)` with one `{area, label, correct}`
+  per question. Coins from games go through `Citadel.addCoins(heroId, amount)`.
+- `test.html` is a placeholder ("Test questions coming soon") with parent-only preview buttons
+  behind the Treasury PIN (pretend pass/fail, add coins, pretend 90% in a weak area).
+- **Test coin amounts are starting numbers** that Ariet can change in the Treasury:
+  20, 30, 50, 60, 80, 110, 120, 150, 200, 220, 260, 320, 350, 400 (tests 1–14).
+
+## Versions and records (permanent rules, follow on every change)
+
+- **Every pull request is one version.** Numbers look like `v0.2.0`.
+  New feature: raise the middle number (v0.2.0 → v0.3.0).
+  Fix: raise the last number (v0.2.0 → v0.2.1).
+- Put the version in the **pull request title**, e.g. "v0.2.0: Hero profiles".
+- Add an entry to **`CHANGELOG.md`** (newest first): version, date, what was added or
+  changed, which files changed, and why, in plain words.
+- Show the current version in small text in the **footer of every page**. To update it,
+  search all files for the tag `[VERSION]` (each page footer) and change
+  `VERSION` in `citadel-core.js` `[JS-VERSION]`. New pages must include the footer version.
+- Add a line to the **change log at the bottom of this file** too.
+- In every pull request description, include a short **"How to undo this version"** note
+  explaining how to use GitHub's **Revert** button on the merged pull request.
+
 ## How to work with Ariet
 
 - Ariet is new to GitHub. Explain each pull request in plain words: what changed,
@@ -108,10 +158,27 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 ## Open decisions
 
 - [ ] Coins: just for fun, or tied to real rewards approved in the Treasury?
-- [ ] Treasury PIN: Ariet sets it on first use
+- [x] Treasury PIN: Ariet sets it on first use (built in v0.2.0)
 - [ ] When to move the kids' games to their own repository (before sharing outside the family)
+
+## Current files
+
+| File | What it is |
+| --- | --- |
+| `index.html` | Main page (castle, four closed halls, "Enter the Citadel" button) |
+| `heroes.html` | "Who enters the Citadel?" hero cards |
+| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, halls |
+| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, hero progress, test coin amounts |
+| `test.html` | A hero's next test (`test.html?id=...`): placeholder until real questions, parent preview |
+| `citadel-core.js` | Shared code: heroes, coins, rank ladder, tests, area scores, levels, PIN, halls |
+| `citadel-core.css` | Shared look for the pages above |
+| `CHANGELOG.md` | Every version, newest first |
 
 ## Change log
 
 - Nov 14, 2026: Repository created. Added `index.html` (Citadel main page with four
-  closed halls), `citadel.jpg`, and this brief.
+  closed halls), `citadel.jpg`, and this brief. (v0.1.0)
+- Nov 15, 2026: **v0.2.0 Hero profiles.** Added `heroes.html`, `hero.html`, `treasury.html`,
+  `test.html`, `citadel-core.js`, `citadel-core.css`, `CHANGELOG.md`; "Enter the Citadel" button
+  and footer version on `index.html`; version rules and rank ladder/test rules above.
+  Rewards/payouts and real test questions not built yet.

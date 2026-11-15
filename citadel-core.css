@@ -1,0 +1,309 @@
+/*
+  SolidMind Citadel - shared look (citadel-core.css)
+  ------------------------------------------------------------
+  Purpose: colors, fonts, buttons, cards, forms and hall banners shared
+  by the hero pages and the Treasury, so they match index.html.
+  (index.html keeps its own copy inside the page so the main page
+  still looks right even on its own.)
+
+  Depends on: Google Fonts Cinzel + Alegreya Sans (linked in each page).
+  Used by:    heroes.html, hero.html, treasury.html, test.html
+
+  Search these tags to jump to a section:
+    [CSS-COLORS]   night and daylight color sets (same as index.html)
+    [CSS-BASE]     page, text, links
+    [CSS-HEADER]   page title strip and back links
+    [CSS-BUTTONS]  buttons (at least 48 px tall for small fingers)
+    [CSS-HEROES]   hero cards and the shield crest
+    [CSS-HOME]     a hero's home page: coins, rank, level
+    [CSS-RANK]     bronze / silver / gold rank badge
+    [CSS-TEST]     next-test box, test page, Treasury coin table
+    [CSS-FORMS]    Treasury forms, crest and color pickers
+    [CSS-BANNERS]  the four hall banners
+    [CSS-NOTICE]   warning and "saved on this device" notes
+    [CSS-FOOTER]   bottom of the page and version number
+*/
+
+/* [CSS-COLORS] Night is the default; daylight stone when the device is in light mode */
+:root {
+  color-scheme: dark;
+  --sky: #0F1B30;
+  --stone: #1A2740;
+  --stone-2: #22324F;
+  --banner: #1C2B4A;
+  --gold: #D9A441;
+  --gold-soft: #A9802F;
+  --text: #EFE3C8;
+  --text-dim: #B9AE96;
+  --arcane: #6CCBFF;
+  --danger: #FF8A80;
+  --shadow: rgba(4, 8, 18, .55);
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --sky: #E4E8EE;
+    --stone: #F2F4F7;
+    --stone-2: #FFFFFF;
+    --banner: #1C2B4A;
+    --gold: #8A6418;
+    --gold-soft: #B38A35;
+    --text: #1A2338;
+    --text-dim: #4A5468;
+    --arcane: #1C6FA8;
+    --danger: #B3261E;
+    --shadow: rgba(26, 35, 56, .18);
+  }
+}
+:root[data-theme="dark"] { color-scheme: dark; }
+*, *::before, *::after { box-sizing: inherit; }
+
+/* [CSS-BASE] */
+body {
+  margin: 0;
+  background: var(--sky);
+  color: var(--text);
+  font-family: "Alegreya Sans", "Segoe UI", system-ui, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.55;
+}
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--arcane); outline-offset: 4px; }
+.wrap { width: min(1100px, 100% - 2rem); margin-inline: auto; }
+h1, h2, h3 { font-family: "Cinzel", Georgia, serif; color: var(--gold); line-height: 1.2; }
+[hidden] { display: none !important; }
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* [CSS-HEADER] */
+.top-links {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem;
+  padding-top: 1rem;
+}
+.top-links a {
+  display: inline-flex; align-items: center; min-height: 44px;
+  padding: 0 .25rem; color: var(--text-dim); text-decoration: none;
+}
+.top-links a:hover { color: var(--gold); text-decoration: underline; }
+.page-title { text-align: center; margin: 1.5rem auto 0; max-width: 40ch; }
+.page-title h1 {
+  font-weight: 800; font-size: clamp(1.8rem, 5vw, 2.7rem);
+  letter-spacing: .03em; margin: 0;
+}
+.page-title p { color: var(--text-dim); margin: .6rem 0 0; }
+
+/* [CSS-BUTTONS] */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  min-height: 48px; padding: .6rem 1.4rem;
+  font: 700 1rem/1.2 "Cinzel", Georgia, serif; letter-spacing: .05em;
+  color: #1A1408; background: linear-gradient(#E8B85A, #C9922E);
+  border: 0; border-radius: 10px; cursor: pointer; text-decoration: none;
+  box-shadow: 0 8px 18px -8px var(--shadow);
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost {
+  color: var(--gold); background: transparent;
+  box-shadow: inset 0 0 0 2px var(--gold-soft);
+}
+.btn.danger { color: var(--danger); background: transparent; box-shadow: inset 0 0 0 2px var(--danger); }
+.btn.small { min-height: 44px; padding: .4rem 1rem; font-size: .9rem; }
+.btn-row { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: center; margin-top: 1.25rem; }
+
+/* [CSS-HEROES] Hero cards on "Who enters the Citadel?" */
+.hero-grid {
+  list-style: none; padding: 0; margin: 2rem 0 0;
+  display: grid; gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
+}
+.hero-card {
+  display: flex; flex-direction: column; align-items: center; gap: .5rem;
+  height: 100%; padding: 1.5rem 1rem 1.25rem;
+  background: var(--stone); border: 2px solid var(--gold-soft); border-radius: 16px;
+  text-decoration: none; text-align: center;
+  box-shadow: 0 18px 30px -18px var(--shadow);
+  border-top: 8px solid var(--hero-color, var(--gold));
+  transition: transform .2s ease, border-color .2s ease;
+}
+a.hero-card:hover, a.hero-card:focus-visible { transform: translateY(-4px); border-color: var(--gold); }
+.hero-card .name {
+  font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.3rem;
+  color: var(--text); overflow-wrap: anywhere;
+}
+.hero-card .meta { color: var(--text-dim); font-size: 1rem; }
+.crest { display: block; filter: drop-shadow(0 8px 10px var(--shadow)); }
+.crest text { font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif; }
+
+.empty {
+  text-align: center; max-width: 36ch; margin: 2.5rem auto 0;
+  padding: 1.5rem; background: var(--stone); border-radius: 16px;
+}
+
+/* [CSS-HOME] A hero's own home page */
+.hero-head { display: flex; flex-direction: column; align-items: center; text-align: center; margin-top: 1.5rem; }
+.hero-head h1 { font-size: clamp(1.9rem, 6vw, 2.8rem); margin: .75rem 0 0; overflow-wrap: anywhere; }
+.stats {
+  display: grid; gap: 1rem; list-style: none; padding: 0;
+  margin: 1.75rem auto 0; max-width: 640px;
+  grid-template-columns: repeat(3, 1fr);
+}
+@media (max-width: 480px) { .stats { grid-template-columns: 1fr; } }
+.stat {
+  background: var(--stone); border: 1px solid var(--gold-soft); border-radius: 14px;
+  padding: .9rem .75rem; text-align: center;
+}
+.stat .label { display: block; font-size: .9rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; }
+.stat .value { display: block; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.45rem; color: var(--gold); }
+.coin {
+  display: inline-block; width: 1em; height: 1em; border-radius: 50%; vertical-align: -.12em; margin-right: .3rem;
+  background: radial-gradient(circle at 35% 35%, #FFE7A3, #D9A441 55%, #8A6418);
+  box-shadow: inset 0 0 0 2px rgba(138, 100, 24, .6);
+}
+
+/* [CSS-RANK] Rank badge: a small medal colored bronze, silver or gold, plus the words */
+.rank-badge { display: inline-flex; align-items: center; gap: .4rem; font-weight: 700; }
+.medal {
+  flex: none; width: 1.05em; height: 1.05em; border-radius: 50%;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, .25), 0 1px 3px var(--shadow);
+}
+.tier-bronze .medal { background: radial-gradient(circle at 35% 35%, #F2C29B, #B8733A 60%, #7A4520); }
+.tier-silver .medal { background: radial-gradient(circle at 35% 35%, #FFFFFF, #B9C2CC 60%, #6E7884); }
+.tier-gold   .medal { background: radial-gradient(circle at 35% 35%, #FFE7A3, #D9A441 60%, #8A6418); }
+.stat .rank-badge { font-family: "Cinzel", Georgia, serif; font-size: 1.1rem; color: var(--gold); justify-content: center; }
+.hero-card .rank-badge { color: var(--text); font-size: 1rem; }
+
+/* [CSS-TEST] Next test box (hero page), test page, coin table (Treasury) */
+.next-test {
+  max-width: 640px; margin: 1.25rem auto 0; padding: 1rem 1.25rem; text-align: center;
+  background: var(--stone); border: 2px solid var(--arcane); border-radius: 14px;
+}
+.next-test h2 { font-size: 1.15rem; margin: 0 0 .3rem; }
+.next-test p { margin: .3rem 0; }
+.weak-list { list-style: none; padding: 0; margin: .4rem 0 0; display: grid; gap: .3rem; }
+.weak-list li::before { content: "\2610  "; color: var(--text-dim); }
+.weak-list li.done::before { content: "\2611  "; color: var(--arcane); }
+.state-tag {
+  display: inline-block; padding: .1rem .6rem; border-radius: 99px; font-size: .9rem; font-weight: 700;
+  background: var(--sky); border: 1px solid var(--gold-soft);
+}
+.state-ready, .state-retake { border-color: var(--arcane); color: var(--arcane); }
+.state-mastery { border-color: var(--danger); color: var(--danger); }
+.coming-soon {
+  text-align: center; font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.3rem;
+  color: var(--arcane); padding: 1.25rem; margin: 1rem 0; border: 2px dashed var(--arcane); border-radius: 14px;
+}
+.rules { margin: .5rem 0 0; padding-left: 1.2rem; }
+.rules li { margin: .25rem 0; }
+.table-scroll { overflow-x: auto; }
+.coin-table { width: 100%; border-collapse: collapse; font-size: 1rem; }
+.coin-table th, .coin-table td { padding: .4rem .5rem; border-bottom: 1px solid var(--gold-soft); text-align: left; vertical-align: middle; }
+.coin-table th { font-family: "Cinzel", Georgia, serif; color: var(--gold); font-size: .95rem; }
+.coin-table input { width: 6.5rem; min-height: 44px; padding: .3rem .5rem; font: inherit; color: var(--text);
+  background: var(--sky); border: 2px solid var(--gold-soft); border-radius: 8px; }
+.promo { color: var(--arcane); font-size: .9rem; font-weight: 700; }
+
+/* [CSS-FORMS] Treasury */
+.panel {
+  background: var(--stone); border: 1px solid var(--gold-soft); border-radius: 16px;
+  padding: clamp(1rem, 4vw, 1.75rem); margin: 1.75rem auto 0; max-width: 720px;
+  box-shadow: 0 18px 30px -20px var(--shadow);
+}
+.panel h2 { margin: 0 0 .75rem; font-size: 1.35rem; }
+.panel > p { margin: .25rem 0 .75rem; color: var(--text-dim); }
+label, .field-label { display: block; font-weight: 700; margin: 1rem 0 .4rem; }
+input[type="text"], input[type="password"], select {
+  width: 100%; min-height: 48px; padding: .5rem .8rem;
+  font: inherit; color: var(--text); background: var(--sky);
+  border: 2px solid var(--gold-soft); border-radius: 10px;
+}
+input:focus-visible, select:focus-visible { border-color: var(--arcane); outline-offset: 2px; }
+.pin-input { font-size: 1.6rem !important; letter-spacing: .6em; text-align: center; max-width: 12rem; }
+.hint { font-size: .95rem; color: var(--text-dim); margin: .3rem 0 0; }
+.error { color: var(--danger); font-weight: 700; margin: .75rem 0 0; min-height: 1.5em; }
+.ok { color: var(--arcane); font-weight: 700; margin: .75rem 0 0; }
+
+fieldset { border: 0; padding: 0; margin: 1rem 0 0; min-width: 0; }
+legend { font-weight: 700; padding: 0; margin-bottom: .4rem; }
+.picker { display: flex; flex-wrap: wrap; gap: .5rem; }
+.picker input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.picker label {
+  margin: 0; display: grid; place-items: center;
+  width: 52px; height: 52px; border-radius: 12px; cursor: pointer;
+  background: var(--sky); border: 2px solid var(--gold-soft);
+  font-size: 1.7rem; font-weight: 400;
+}
+.picker.colors label { border-radius: 50%; }
+.picker input:checked + label { border-color: var(--arcane); box-shadow: 0 0 0 3px var(--arcane); }
+.picker input:focus-visible + label { outline: 3px solid var(--arcane); outline-offset: 3px; }
+
+.roster { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .9rem; }
+.roster li {
+  display: grid; grid-template-columns: auto 1fr; gap: .4rem 1rem; align-items: center;
+  padding: .9rem; background: var(--sky); border-radius: 12px; border-left: 6px solid var(--hero-color, var(--gold));
+}
+.roster .who { font-family: "Cinzel", Georgia, serif; font-weight: 700; font-size: 1.15rem; overflow-wrap: anywhere; }
+.roster .info { color: var(--text-dim); font-size: 1rem; }
+.roster .controls { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.roster .controls label { margin: 0; font-weight: 500; display: flex; align-items: center; gap: .5rem; }
+.roster .controls select { width: auto; }
+
+/* [CSS-BANNERS] The four hall banners (same design as index.html) */
+.halls-title { font-size: clamp(1.4rem, 3vw, 1.9rem); text-align: center; margin: clamp(2.5rem, 7vw, 4rem) 0 .4rem; }
+.halls-sub { text-align: center; color: var(--text-dim); margin: 0 auto 2.25rem; max-width: 46ch; }
+.halls {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 2.25rem 1.5rem; list-style: none; padding: 0; margin: 0;
+}
+.hall { position: relative; padding-top: 14px; }
+.hall::before {
+  content: ""; position: absolute; top: 4px; left: -6px; right: -6px; height: 10px; border-radius: 5px;
+  background: linear-gradient(var(--gold), var(--gold-soft));
+}
+.cloth {
+  --notch: 34px; display: block; height: 100%; text-decoration: none; padding: 3px; background: var(--gold);
+  clip-path: polygon(0 0, 100% 0, 100% calc(100% - var(--notch)), 50% 100%, 0 calc(100% - var(--notch)));
+  transform-origin: top center; filter: drop-shadow(0 18px 18px var(--shadow));
+}
+.cloth-inner {
+  height: 100%; background: var(--banner); clip-path: inherit;
+  padding: 1.6rem 1.25rem calc(var(--notch) + 1.6rem); text-align: center; color: #EFE3C8;
+  display: flex; flex-direction: column; align-items: center; gap: .6rem;
+}
+.cloth svg { width: 56px; height: 56px; stroke: #E3B456; fill: none; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.cloth h3 { font-weight: 700; font-size: 1.35rem; margin: .2rem 0 0; color: #F3D58C; }
+.cloth p { margin: 0; font-size: 1.05rem; color: #D9CEB4; }
+.cloth .status { margin-top: auto; padding-top: .8rem; font-size: .95rem; color: #8FD6FF; }
+a.cloth { transition: transform .2s ease; }
+a.cloth:hover, a.cloth:focus-visible { transform: translateY(-4px); }
+@keyframes unfurl { from { transform: scaleY(.05); opacity: 0; } to { transform: scaleY(1); opacity: 1; } }
+.hall .cloth { animation: unfurl .7s cubic-bezier(.2, .8, .2, 1) both; }
+.hall:nth-child(2) .cloth { animation-delay: .12s; }
+.hall:nth-child(3) .cloth { animation-delay: .24s; }
+.hall:nth-child(4) .cloth { animation-delay: .36s; }
+
+/* [CSS-NOTICE] */
+.notice {
+  margin: 1.25rem auto 0; max-width: 720px; padding: .8rem 1rem; border-radius: 12px;
+  background: var(--stone-2); border: 2px dashed var(--danger); color: var(--text);
+}
+.device-note { text-align: center; color: var(--text-dim); font-size: 1rem; max-width: 52ch; margin: 2rem auto 0; }
+
+/* Respect "reduce motion" on the device */
+@media (prefers-reduced-motion: reduce) {
+  .hall .cloth { animation: none; }
+  a.cloth, .hero-card { transition: none; }
+  a.cloth:hover, a.hero-card:hover { transform: none; }
+}
+
+/* [CSS-FOOTER] */
+footer {
+  margin-top: clamp(3rem, 8vw, 5rem); padding: 2rem 0 2.5rem;
+  border-top: 1px solid var(--gold-soft); text-align: center; color: var(--text-dim); font-size: 1rem;
+}
+footer strong { display: block; font-family: "Cinzel", Georgia, serif; color: var(--gold); font-size: 1.1rem; margin-bottom: .25rem; }
+.version { display: block; margin-top: .5rem; font-size: .8rem; opacity: .8; }

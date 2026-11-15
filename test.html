@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - a hero's next test (test.html?id=...)
+  ------------------------------------------------------------
+  Purpose: shows the hero's next tier or promotion test, its coin
+  amount, its status and the rules. Real questions come later with the
+  games, so for now taking the test shows "Test questions coming soon".
+
+  A parent-only preview (behind the Treasury PIN) can pretend a pass,
+  a fail, add coins, or pretend a 90% game score in a weak area, so the
+  whole flow can be seen before real questions exist. The preview uses
+  the same rules code (citadel-core.js) real tests will use.
+
+  Depends on: citadel-core.js, citadel-core.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      links back
+    [HTML-TEST]     test name, coin amount, status, weak areas
+    [HTML-TAKE]     "Take the test" and the coming-soon message
+    [HTML-RULES]    the test rules in plain words
+    [HTML-PREVIEW]  parent-only preview buttons
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-DRAW]       fills in the page
+    [JS-PREVIEW]    pretend pass / fail / coins / mastery
+
+  Privacy: nicknames only; everything is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Test · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="citadel-core.css">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html" id="back-link">&larr; Back to my hall</a>
+    <a href="heroes.html">Choose another hero</a>
+  </nav>
+
+  <section id="test-page" hidden>
+    <div class="hero-head">
+      <div id="crest-spot"></div>
+      <h1 id="hero-name"></h1>
+      <p id="hero-rank"></p>
+    </div>
+
+    <!-- [HTML-TEST] -->
+    <section class="panel" aria-labelledby="test-name">
+      <h2 id="test-name"></h2>
+      <p>Coin amount: <strong id="test-cost"></strong> &middot; You have: <strong id="hero-coins"></strong></p>
+      <p><span class="state-tag" id="test-state"></span></p>
+      <p id="test-text"></p>
+      <ul class="weak-list" id="weak-list" hidden></ul>
+
+      <!-- [HTML-TAKE] The hero decides when; nothing starts by itself. -->
+      <div class="btn-row" id="take-row" hidden><button class="btn" type="button" id="take-btn">Take the test</button></div>
+      <div class="coming-soon" id="coming-soon" hidden role="status">Test questions coming soon</div>
+      <p class="ok" id="result-msg" role="status"></p>
+    </section>
+
+    <!-- [HTML-RULES] -->
+    <section class="panel">
+      <h2>How tests work</h2>
+      <ol class="rules" id="rules"></ol>
+    </section>
+
+    <!-- [HTML-PREVIEW] Parents only. Needs the Treasury PIN. -->
+    <details class="panel" id="preview">
+      <summary style="cursor:pointer;min-height:44px;font-weight:700">Parent preview (needs the Treasury PIN)</summary>
+      <form id="preview-unlock" novalidate>
+        <p class="hint">Real questions come with the games. Until then, these buttons let a parent see what
+          happens after a pass or a fail. They change this hero's real progress on this device.</p>
+        <label for="preview-pin">Treasury PIN</label>
+        <input class="pin-input" id="preview-pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password">
+        <p class="error" id="preview-error" role="alert"></p>
+        <div class="btn-row"><button class="btn ghost" type="submit">Unlock preview</button></div>
+      </form>
+      <div id="preview-tools" hidden>
+        <div class="btn-row">
+          <button class="btn ghost small" type="button" id="pv-coins">Add 10 coins</button>
+          <button class="btn small" type="button" id="pv-pass">Pretend pass (92%)</button>
+          <button class="btn danger small" type="button" id="pv-fail">Pretend fail (58%)</button>
+        </div>
+        <div class="btn-row" id="pv-mastery"></div>
+        <p class="hint">Pretend fail scores under 75% in "Sample skill A" and "Sample skill B" (the weak areas).</p>
+      </div>
+    </details>
+  </section>
+
+  <div class="empty" id="not-found" hidden>
+    <p><strong>We couldn't find that hero.</strong></p>
+    <p>They may have been removed, or they were added on a different device.</p>
+    <a class="btn" href="heroes.html">Choose a hero</a>
+  </div>
+
+  <p class="device-note">Tests, coins and ranks are saved on this device only.</p>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.2.0</span>
+  </div>
+</footer>
+
+<script src="citadel-core.js"></script>
+<script>
+(function () {
+  var C = window.Citadel, el = C.el;
+  function $(id) { return document.getElementById(id); }
+  var id = new URLSearchParams(location.search).get("id");
+  C.showStorageNotice($("main"));
+  if (!id || !C.getHero(id)) { $("not-found").hidden = false; return; }
+  $("back-link").href = "hero.html?id=" + encodeURIComponent(id);
+
+  var STATE_NAMES = { top: "Top of the ladder", coins: "Locked: needs coins", ready: "Ready",
+    "retake-coins": "Failed once", retake: "Retake ready", mastery: "Locked until mastery" };
+
+  // [HTML-RULES] written from the same numbers the rules code uses
+  [
+    "Each test unlocks when you have enough coins. You choose when to take it.",
+    "Score " + C.PASS_MARK + "% or more to pass. You keep all your coins and move up one tier.",
+    "If you don't pass, you lose half of the test's coin amount.",
+    "After a first miss you get one retake, when you have enough coins again.",
+    "If the retake is missed too, the test locks. Reach " + C.MASTERY_MARK + "% in each skill you found hard, " +
+      "in that skill's game, and the test opens again like new.",
+    "While a test is waiting, new games stay closed. Games you already have can still be played."
+  ].forEach(function (t) { $("rules").appendChild(el("li", { text: t })); });
+
+  /* [JS-DRAW] Redraws everything from saved data (called after any change). */
+  function draw() {
+    var hero = C.getHero(id);
+    if (!hero) { $("test-page").hidden = true; $("not-found").hidden = false; return; }
+    document.title = hero.nickname + "'s test · SolidMind Citadel";
+    $("crest-spot").textContent = ""; $("crest-spot").appendChild(C.crestSvg(hero, 96));
+    $("hero-name").textContent = hero.nickname;
+    $("hero-rank").textContent = ""; $("hero-rank").appendChild(C.rankBadge(hero));
+    var st = C.testStatus(hero);
+    $("test-name").textContent = st.test ? st.test.name : "No more tests: Master Engineer – Gold!";
+    $("test-cost").textContent = st.test ? st.cost + " coins" : "–";
+    $("hero-coins").textContent = hero.coins + " coins";
+    $("test-state").textContent = STATE_NAMES[st.state];
+    $("test-state").className = "state-tag state-" + st.state;
+    $("test-text").textContent = C.testStatusText(hero);
+    var list = $("weak-list");
+    list.textContent = "";
+    st.weakAreas.forEach(function (a) {
+      list.appendChild(el("li", { class: a.done ? "done" : null,
+        text: a.label + (a.done ? " – mastered" : " – needs " + C.MASTERY_MARK + "%") }));
+    });
+    list.hidden = !st.weakAreas.length;
+    $("take-row").hidden = !C.canTakeTest(hero);
+    if (!C.canTakeTest(hero)) $("coming-soon").hidden = true;
+
+    // Preview buttons follow the same rules: pass/fail only when the test can be taken.
+    $("pv-pass").disabled = $("pv-fail").disabled = !C.canTakeTest(hero);
+    $("pv-coins").disabled = st.state === "top";
+    var m = $("pv-mastery");
+    m.textContent = "";
+    st.weakAreas.forEach(function (a) {
+      if (a.done) return;
+      m.appendChild(el("button", { class: "btn ghost small", type: "button",
+        text: "Pretend 90% in " + a.label,
+        onclick: function () { C.reportAreaScore(id, a.id, 90); say("90% reported for " + a.label + "."); draw(); } }));
+    });
+  }
+
+  // [HTML-TAKE] No real questions yet.
+  $("take-btn").addEventListener("click", function () { $("coming-soon").hidden = false; });
+
+  /* [JS-PREVIEW] Fake answers, each tagged with the one area it checks,
+     go through the real grading code (Citadel.finishTest). */
+  function answers(a, b) { // a = right out of 4 in skill A, b = right out of 4 in skill B, skill C always 4/4
+    var list = [];
+    function add(area, label, right) {
+      for (var i = 0; i < 4; i++) list.push({ area: area, label: label, correct: i < right });
+    }
+    add("preview-a", "Sample skill A", a);
+    add("preview-b", "Sample skill B", b);
+    add("preview-c", "Sample skill C", 4);
+    return list;
+  }
+  function say(msg) { $("result-msg").textContent = msg; }
+  function take(list) {
+    try {
+      var r = C.finishTest(id, list);
+      var msgs = {
+        passed: "Passed with " + r.result.percent + "%! Now " + C.rankFor(r.hero).label + ". All coins kept.",
+        "failed-once": "Scored " + r.result.percent + "%. Lost half the coin amount. One retake left.",
+        locked: "Scored " + r.result.percent + "% on the retake. The test is locked until the weak areas reach " + C.MASTERY_MARK + "%."
+      };
+      say(msgs[r.outcome]);
+    } catch (e) { say(e.message); }
+    draw();
+  }
+  $("pv-pass").addEventListener("click", function () { take(answers(4, 3)); });   // 11 of 12 right
+  $("pv-fail").addEventListener("click", function () { take(answers(1, 2)); });   // 7 of 12 right
+  $("pv-coins").addEventListener("click", function () { C.addCoins(id, 10); say("Added 10 coins."); draw(); });
+
+  $("preview-unlock").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (!C.hasPin()) { $("preview-error").textContent = "Create the PIN in the Treasury first."; return; }
+    if (C.checkPin($("preview-pin").value)) {
+      $("preview-pin").value = ""; $("preview-error").textContent = "";
+      $("preview-unlock").hidden = true; $("preview-tools").hidden = false;
+    } else {
+      $("preview-error").textContent = "That PIN is not right.";
+    }
+  });
+
+  draw();
+  $("test-page").hidden = false;
+})();
+</script>
+</body>
+</html>
