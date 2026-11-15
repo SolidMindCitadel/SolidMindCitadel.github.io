@@ -153,6 +153,49 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   id `Citadel.VISITOR_ID` ("visitor"). Visitors can play, but nothing is saved: coins vanish when
   they leave, no trophies, no treasure chest, and no rank tests.
 
+## Games: how they work (built in v0.4.0, Pizza Party is the template)
+
+- Each game is `games/<name>.html?id=<heroId or visitor>` with its question makers in
+  `games/<name>-questions.js`. Hall pages (e.g. `proving-grounds.html?id=...`) list their games in
+  one `GAMES` line each. Copy `games/pizza-party.html` when building a new game.
+- **Levels:** a game uses the hero's level from the Treasury. Visitors pick a level.
+- **Starter games** (`Citadel.STARTER_GAMES`, now just `pizza-party`) are never blocked by rule 6.
+  Other games check `Citadel.canPlayGame(heroId, gameId)`.
+- **Scoring (Ariet's rules):**
+  - Right on the first try = 100 points.
+  - Wrong: the game shows why, step by step (never a harsh sound). The kid then fixes that
+    same question, which earns no points, and that skill gets a "miss".
+  - Later in the round, a NEW question on that skill is added (at most 3 extra per round).
+  - Each miss on a skill this session lowers that skill's points by 10 (90, 80, 70 ... never
+    below 10). Misses reset when the hero leaves the game page.
+  - Coins per round = total points ÷ 100, rounded. A perfect 5-question round = 5 coins, so
+    4 good rounds unlock the first test (20 coins).
+- **Skills:** every answer goes to `Citadel.reportAnswer(heroId, {area, label, points, firstTry})`.
+  - Grade = average points of the last 10 answers in that skill (wrong = 0).
+  - Mastery = right on the first try in at least 9 of the last 10. A fixed question never
+    counts; a later re-test answered right does.
+- **Best score** per game and level goes to the Trophy hall (`Citadel.recordBestScore`).
+- Each game may have its own fun mini rank ladder, stored with `Citadel.setGameData`. It never
+  changes the Citadel rank. Pizza Party (by rounds finished): Dough Roller 0, Sauce Spreader 3,
+  Cheese Sprinkler 8, Topping Tosser 15, Pizza Master 25.
+- **Speech and sound:** every question has a 🔊 speaker button that reads it out for anyone.
+  When "Read words out loud" is on, questions are also read automatically. Sound plays only
+  when Sound is on.
+- **Test question bank** (`citadel-questions.js`): games register question MAKERS per skill area
+  and level, not fixed questions, so every question has new numbers.
+  - Rank tests must ask the same TYPE of question (same skill, same level) but with different
+    wording, numbers and things, so a kid can't pass by memorising game answers.
+  - `CitadelQuestions.forTest` never uses a game's own theme. Pizza Party questions appear in
+    tests as cookies, apples, pie or cake, with friends, ponies or teddy bears instead of kids.
+  - test.html stays "Test questions coming soon" until 2–3 games exist. Ariet will then decide
+    which skills each of the 14 tests covers.
+- Pizza Party skill areas:
+  - Level 1: Counting slices (`count-1-10`), More or fewer (`more-fewer`), Adding and taking
+    away slices (`add-take-10`).
+  - Level 2: Sharing equally (`share-equal`), Halves and quarters (`halves-quarters`).
+  - Level 3: Sharing with leftovers (`share-leftover`), Fractions of a pizza
+    (`fraction-of-whole`), Comparing fractions (`compare-fractions`).
+
 ## Planned (not built yet): hidden quests and special events
 
 - A hidden quest appears when a hero reaches each new rank: Squire, Knight,
@@ -227,10 +270,14 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 
 | File | What it is |
 | --- | --- |
-| `index.html` | Main page (castle, four closed halls, "Enter the Citadel" button) |
+| `index.html` | Main page (castle, four halls: Proving Grounds open, "Enter the Citadel" button) |
 | `heroes.html` | "Who enters the Citadel?" hero cards |
 | `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, halls, treasure chest, trophy hall, settings |
-| `visitor.html` | Visitor page for friends: halls only, nothing saved |
+| `visitor.html` | Visitor page for friends: halls, games, nothing saved |
+| `proving-grounds.html` | The Proving Grounds hall: list of its games (`?id=hero or visitor`) |
+| `games/pizza-party.html` | Pizza Party, the first game and the template for others |
+| `games/pizza-party-questions.js` | Pizza Party's question makers (added to the test bank) |
+| `citadel-questions.js` | Shared test question bank, themes, pictures and step-by-step explanations |
 | `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, hero progress, correct coins, test coin amounts, backup and restore |
 | `test.html` | A hero's next test (`test.html?id=...`): placeholder until real questions, parent preview |
 | `citadel-core.js` | Shared code: heroes, coins and history, rank ladder, tests, area scores, trophies, settings, visitor, backup, levels, PIN, halls |
@@ -252,3 +299,6 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   gets coin history and per-game totals, trophy hall, Sound/Read-aloud settings; Treasury gets
   "Correct coins" and backup/restore; new `visitor.html`; Nexus site-map note reworded; planned hidden
   quests, special events and treasures written down above (not built).
+- Nov 15, 2026: **v0.4.0 Pizza Party.** First game (`games/pizza-party.html`), Proving Grounds
+  opened (`proving-grounds.html`), shared question bank (`citadel-questions.js`), answer reporting,
+  skill grades and mastery in `citadel-core.js`, skill grades in the Treasury. Game rules above.

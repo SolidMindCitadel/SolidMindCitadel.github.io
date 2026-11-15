@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - Pizza Party (games/pizza-party.html?id=...)
+  ------------------------------------------------------------
+  Purpose: the first game, in the Proving Grounds, and the TEMPLATE the
+  other games copy. A round is 5 questions about pizza: counting slices,
+  sharing, halves, fractions... The level (1, 2 or 3) comes from the
+  hero's level set in the Treasury. Visitors pick a level and nothing
+  is saved. Pizza Party is a STARTER game: every hero has it, so it is
+  never blocked while a rank test is waiting.
+
+  Scoring (Ariet's rules, also in CLAUDE.md):
+    - Right on the first try = 100 points.
+    - Wrong: the game shows WHY (step by step), the kid fixes that same
+      question (no points, it's for learning), and that skill gets a
+      "miss". Later in the round a NEW question on that skill is added.
+    - Each miss on a skill this session lowers that skill's points by
+      10 (90, 80, 70 ... never below 10). Misses reset when the hero
+      leaves the game page. At most 3 extra questions per round.
+    - Coins per round = total points / 100, rounded (perfect round = 5).
+    - Every answer is reported to its skill area (Citadel.reportAnswer):
+      grade = average of the last 10, mastery = first-try right in the
+      last 10 (90% = 9 of 10).
+
+  Depends on: ../citadel-core.js, ../citadel-core.css,
+              ../citadel-questions.js, pizza-party-questions.js
+
+  Search these tags to jump to a section:
+    [CSS-GAME]      this game's own look (bright, big buttons)
+    [HTML-TOP]      back link and the player's coins
+    [HTML-START]    start screen: mini rank, level, Start button
+    [HTML-PLAY]     a question: speaker, words, picture, answers
+    [HTML-END]      celebration screen at the end of a round
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-SETUP]      who is playing, level, settings
+    [JS-RANKS]      the Pizza Party mini rank ladder
+    [JS-ROUND]      building a round of 5 questions (+ re-tests)
+    [JS-ASK]        showing a question
+    [JS-ANSWER]     right / wrong / fixing, points and skill reports
+    [JS-END]        coins, best score, rank, celebration
+
+  Privacy: nothing personal; progress saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Pizza Party · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍕</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../citadel-core.css">
+<style>
+/* [CSS-GAME] Bright and friendly, with very big tap targets */
+.game { max-width: 720px; margin: 0 auto; }
+.player { display: flex; align-items: center; gap: .5rem; font-weight: 700; }
+.player .crest { flex: none; }
+.game-title { text-align: center; margin: 1rem 0 0; }
+.game-title .pizza { font-size: clamp(4rem, 18vw, 6rem); line-height: 1; display: block; }
+.game-title h1 { margin: .3rem 0 0; font-size: clamp(2rem, 8vw, 2.8rem); }
+.chef { display: flex; flex-direction: column; align-items: center; gap: .2rem; margin-top: 1rem; }
+.chef .hat { font-size: 2.4rem; }
+.chef strong { font-family: "Cinzel", Georgia, serif; font-size: 1.25rem; color: var(--gold); }
+.bar { width: min(300px, 80%); height: 12px; border-radius: 99px; background: var(--sky); border: 1px solid var(--gold-soft); overflow: hidden; }
+.bar > span { display: block; height: 100%; background: linear-gradient(90deg, #F2B33D, #E8603C); }
+.levels { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem; }
+.levels button { min-width: 6rem; }
+.levels button[aria-pressed="true"] { box-shadow: 0 0 0 3px var(--arcane); }
+.big-btn { font-size: 1.4rem; min-height: 64px; padding: .8rem 2.4rem; border-radius: 16px; }
+.dots { display: flex; justify-content: center; gap: .35rem; margin: .5rem 0 0; flex-wrap: wrap; }
+.dots span { font-size: 1.5rem; opacity: .3; filter: grayscale(1); }
+.dots span.done { opacity: 1; filter: none; }
+.dots span.now { opacity: 1; filter: none; transform: scale(1.25); }
+.dots span.extra { font-size: 1.1rem; }
+.q-card { background: var(--stone); border: 2px solid var(--gold-soft); border-radius: 20px; padding: 1rem; margin-top: 1rem; box-shadow: 0 18px 30px -20px var(--shadow); }
+.q-head { display: flex; align-items: flex-start; gap: .75rem; }
+.q-text { flex: 1; margin: 0; font: 700 clamp(1.25rem, 5vw, 1.6rem)/1.3 "Alegreya Sans", sans-serif; color: var(--text); }
+.speaker { flex: none; width: 56px; height: 56px; border-radius: 50%; font-size: 1.6rem; border: 2px solid var(--gold-soft); background: var(--sky); cursor: pointer; }
+.speaker:active { transform: scale(.95); }
+.q-pic { margin: 1rem 0; min-height: 6rem; display: grid; place-items: center; }
+.choices { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); }
+.choice {
+  min-height: 72px; padding: .5rem; border-radius: 16px; cursor: pointer;
+  font: 800 clamp(1.4rem, 6vw, 2rem)/1.1 "Alegreya Sans", sans-serif; color: #1A1408;
+  background: linear-gradient(#FFE08A, #F2B33D); border: 3px solid #C47A2C; box-shadow: 0 6px 0 #9C5B22;
+}
+.choice:active { transform: translateY(3px); box-shadow: 0 3px 0 #9C5B22; }
+.choice.long { font-size: 1.15rem; }
+.choice:disabled { opacity: .35; cursor: default; box-shadow: none; transform: none; }
+.choice.right { background: linear-gradient(#A6F0C6, #3CBF7A); border-color: #1E7A4A; box-shadow: 0 6px 0 #1E7A4A; opacity: 1; }
+.choice.glow { animation: glow 1s ease-in-out infinite alternate; }
+@keyframes glow { from { box-shadow: 0 0 0 0 var(--arcane); } to { box-shadow: 0 0 0 8px var(--arcane); } }
+.feedback { text-align: center; margin: .75rem 0 0; min-height: 2.2rem; font: 800 1.5rem/1.3 "Alegreya Sans", sans-serif; }
+.feedback.yes { color: #3CBF7A; }
+.feedback.look { color: var(--arcane); }
+.explain-box { margin-top: .75rem; padding: .9rem .5rem; border-radius: 16px; border: 2px dashed var(--arcane); background: var(--sky); }
+.pop { animation: pop .5s ease; }
+@keyframes pop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: scale(1); } }
+.end { text-align: center; }
+.stars { font-size: 3rem; letter-spacing: .3rem; margin: .5rem 0; }
+.end .coins-won { font: 800 1.8rem/1.2 "Cinzel", Georgia, serif; color: var(--gold); }
+.skills { list-style: none; padding: 0; margin: .5rem auto 0; max-width: 420px; text-align: left; }
+.skills li { display: flex; justify-content: space-between; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid var(--gold-soft); }
+.confetti { position: fixed; inset: 0; pointer-events: none; overflow: hidden; z-index: 5; }
+.confetti span { position: absolute; top: -3rem; font-size: 2rem; animation: fall 2.6s ease-in forwards; }
+@keyframes fall { to { transform: translateY(110vh) rotate(540deg); } }
+.new-best { color: var(--arcane); font-weight: 800; }
+@media (prefers-reduced-motion: reduce) {
+  .pop, .choice.glow, .confetti span { animation: none; }
+  .confetti { display: none; }
+  .choice:active, .speaker:active { transform: none; }
+}
+</style>
+</head>
+<body>
+
+<main class="wrap game" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="../proving-grounds.html" id="back-link">&larr; The Proving Grounds</a>
+    <span class="player" id="player"></span>
+  </nav>
+
+  <!-- [HTML-START] -->
+  <section id="start" hidden>
+    <div class="game-title">
+      <span class="pizza" aria-hidden="true">🍕</span>
+      <h1>Pizza Party</h1>
+      <p>Count, share and slice pizzas for hungry kids!</p>
+    </div>
+    <div class="chef" id="chef"></div>
+    <div id="level-box" class="panel" style="text-align:center">
+      <p id="level-text" style="margin:0"></p>
+      <div class="levels" id="level-pick" hidden role="group" aria-label="Choose a level"></div>
+    </div>
+    <div class="btn-row"><button class="btn big-btn" type="button" id="start-btn">Start! 🍕</button></div>
+    <p class="device-note" id="save-note"></p>
+  </section>
+
+  <!-- [HTML-PLAY] -->
+  <section id="play" hidden aria-live="polite">
+    <div class="dots" id="dots" aria-hidden="true"></div>
+    <p class="visually-hidden" id="progress-text"></p>
+    <div class="q-card">
+      <div class="q-head">
+        <p class="q-text" id="q-text"></p>
+        <button class="speaker" type="button" id="speak-btn" aria-label="Read the question out loud">🔊</button>
+      </div>
+      <div class="q-pic" id="q-pic"></div>
+      <div class="choices" id="choices"></div>
+      <p class="feedback" id="feedback" role="status"></p>
+      <div class="explain-box" id="explain" hidden></div>
+    </div>
+  </section>
+
+  <!-- [HTML-END] -->
+  <section id="end" class="end" hidden>
+    <div class="game-title"><span class="pizza" aria-hidden="true">🎉</span><h1>Pizza Party!</h1></div>
+    <div class="stars" id="stars" aria-hidden="true"></div>
+    <p id="score-text"></p>
+    <p class="coins-won" id="coins-won"></p>
+    <p class="new-best" id="new-best" hidden>New best score! 🏆</p>
+    <div class="chef" id="end-chef"></div>
+    <section class="panel">
+      <h2>My pizza skills</h2>
+      <ul class="skills" id="skills"></ul>
+      <p class="hint">Each skill shows your last 10 questions. Get 9 of the last 10 right on the first try to master it ⭐.</p>
+    </section>
+    <div class="btn-row">
+      <button class="btn big-btn" type="button" id="again-btn">Play again</button>
+      <a class="btn ghost" id="done-link" href="../proving-grounds.html">Back to the Proving Grounds</a>
+    </div>
+  </section>
+
+  <div class="empty" id="no-player" hidden>
+    <p><strong>Who's playing?</strong></p>
+    <p>Choose your hero first, or play as a visitor.</p>
+    <div class="btn-row"><a class="btn" href="../heroes.html">Choose a hero</a><a class="btn ghost" href="../visitor.html">Play as a visitor</a></div>
+  </div>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.4.0</span>
+  </div>
+</footer>
+
+<script src="../citadel-core.js"></script>
+<script src="../citadel-questions.js"></script>
+<script src="pizza-party-questions.js"></script>
+<script>
+(function () {
+  "use strict";
+  var C = window.Citadel, Q = window.CitadelQuestions, el = C.el;
+  var GAME_ID = "pizza-party", GAME_NAME = "Pizza Party";
+  var ROUND_SIZE = 5, MAX_EXTRA = 3;
+  function $(x) { return document.getElementById(x); }
+  var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* [JS-SETUP] Who is playing? A hero id, or "visitor". */
+  var id = new URLSearchParams(location.search).get("id");
+  var hero = id ? C.getHero(id) : null;
+  if (!hero) { $("no-player").hidden = false; return; }
+  var visitor = C.isVisitor(id);
+  var back = "../proving-grounds.html?id=" + encodeURIComponent(id);
+  $("back-link").href = back; $("done-link").href = back;
+  // Rule 6 check (always true for Pizza Party, a starter game). Other games copy this.
+  if (!C.canPlayGame(id, GAME_ID)) { location.replace(back); return; }
+  var level = hero.level || 1;
+
+  function drawPlayer() {
+    var h = C.getHero(id), p = $("player");
+    p.textContent = "";
+    if (!visitor) p.appendChild(C.crestSvg(h, 26));
+    p.appendChild(el("span", { text: visitor ? "Visitor" : h.nickname }));
+    p.appendChild(el("span", { class: "coin", "aria-hidden": "true" }));
+    p.appendChild(el("span", { text: h.coins, "aria-label": h.coins + " coins" }));
+  }
+
+  /* [JS-RANKS] Pizza Party's own fun ladder, from rounds finished.
+     Just for fun: it never changes the Citadel rank. */
+  var PIZZA_RANKS = [
+    { name: "Dough Roller", from: 0, hat: "🫓" },
+    { name: "Sauce Spreader", from: 3, hat: "🍅" },
+    { name: "Cheese Sprinkler", from: 8, hat: "🧀" },
+    { name: "Topping Tosser", from: 15, hat: "🍄" },
+    { name: "Pizza Master", from: 25, hat: "👨‍🍳" }
+  ];
+  function pizzaRank(rounds) {
+    var r = 0;
+    PIZZA_RANKS.forEach(function (x, i) { if (rounds >= x.from) r = i; });
+    return { rank: PIZZA_RANKS[r], next: PIZZA_RANKS[r + 1] || null };
+  }
+  function drawChef(box, rounds) {
+    var pr = pizzaRank(rounds);
+    box.textContent = "";
+    box.appendChild(el("span", { class: "hat", "aria-hidden": "true", text: pr.rank.hat }));
+    box.appendChild(el("strong", { text: pr.rank.name }));
+    if (pr.next) {
+      var pct = Math.round(100 * (rounds - pr.rank.from) / (pr.next.from - pr.rank.from));
+      var bar = el("div", { class: "bar", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": 100, "aria-valuenow": pct,
+        "aria-label": "Progress to " + pr.next.name });
+      bar.appendChild(el("span", { style: "width:" + pct + "%" }));
+      box.appendChild(bar);
+      var left = pr.next.from - rounds;
+      box.appendChild(el("span", { class: "hint", text: left + " more " + (left === 1 ? "round" : "rounds") + " to " + pr.next.name }));
+    } else {
+      box.appendChild(el("span", { class: "hint", text: "The top pizza rank!" }));
+    }
+  }
+
+  // Session memory: misses per skill. Reset when the page is left (never saved).
+  var misses = {};
+  function pointsFor(area) { return Math.max(10, 100 - 10 * (misses[area] || 0)); }
+
+  function showStart() {
+    drawPlayer();
+    var data = C.getGameData(id, GAME_ID);
+    drawChef($("chef"), data.rounds || 0);
+    if (visitor) {
+      // Visitors choose a level, because they have no level from the Treasury.
+      $("level-text").textContent = "Pick a level:";
+      var pick = $("level-pick");
+      pick.hidden = false; pick.textContent = "";
+      [1, 2, 3].forEach(function (n) {
+        pick.appendChild(el("button", { class: "btn ghost", type: "button", text: "Level " + n, "aria-pressed": String(n === level),
+          onclick: function () { level = n; showStart(); } }));
+      });
+      $("save-note").textContent = "Visitor: nothing is saved, and coins are only for fun.";
+    } else {
+      $("level-text").textContent = "Level " + level + " (set by a parent in the Treasury)";
+      $("save-note").textContent = "Coins and skills are saved on this device only.";
+    }
+    ["play", "end"].forEach(function (x) { $(x).hidden = true; });
+    $("start").hidden = false;
+  }
+
+  /* [JS-ROUND] 5 questions, spread over this level's skills as evenly
+     as possible. Re-tests (after a miss) are added to the end. */
+  var round;
+  function newRound() {
+    var areas = Q.areas(level, GAME_ID), slots = [];
+    while (slots.length < ROUND_SIZE) slots = slots.concat(Q.R.shuffle(areas));
+    slots = slots.slice(0, ROUND_SIZE).map(function (a) { return { area: a.area, label: a.areaLabel, extra: false }; });
+    round = { slots: slots, at: 0, extras: 0, points: 0, lastSig: null };
+    $("start").hidden = true; $("end").hidden = true; $("play").hidden = false;
+    ask();
+  }
+
+  function drawDots() {
+    var d = $("dots");
+    d.textContent = "";
+    round.slots.forEach(function (s, i) {
+      d.appendChild(el("span", { class: (i < round.at ? "done" : i === round.at ? "now" : "") + (s.extra ? " extra" : ""), text: "🍕" }));
+    });
+    $("progress-text").textContent = "Question " + (round.at + 1) + " of " + round.slots.length;
+  }
+
+  /* [JS-ASK] */
+  var q, state; // state: "first" (first try), "fix" (fixing after a wrong answer), "done"
+  function ask() {
+    var slot = round.slots[round.at];
+    q = Q.forGame(slot.area, level, "pizza", round.lastSig);
+    round.lastSig = q.sig;
+    state = "first";
+    drawDots();
+    $("q-text").textContent = q.text;
+    $("q-pic").textContent = "";
+    $("q-pic").appendChild(Q.draw(q));
+    $("feedback").textContent = ""; $("feedback").className = "feedback";
+    $("explain").hidden = true; $("explain").textContent = "";
+    var box = $("choices");
+    box.textContent = "";
+    q.choices.forEach(function (c) {
+      box.appendChild(el("button", { class: "choice" + (c.label.length > 6 ? " long" : ""), type: "button",
+        text: c.label, "aria-label": c.say, "data-value": String(c.value), onclick: function () { answer(this, c); } }));
+    });
+    C.speak(id, q.say); // only if "Read words out loud" is on
+  }
+  $("speak-btn").addEventListener("click", function () {
+    // The kid asked: read it even if the setting is off.
+    var words = $("explain").hidden ? q.say : q.why;
+    if (!C.speak(id, words, true)) $("feedback").textContent = "This device can't read out loud.";
+  });
+
+  /* [JS-ANSWER] */
+  var wrongInFix = 0;
+  function answer(btn, c) {
+    if (state === "done") return;
+    var right = String(c.value) === String(q.answer);
+    var slot = round.slots[round.at];
+    if (right) {
+      btn.classList.add("right", "pop");
+      disableAll();
+      if (state === "first") {
+        var pts = pointsFor(slot.area);
+        round.points += pts;
+        C.reportAnswer(id, { area: slot.area, label: slot.label, points: pts, firstTry: true });
+        say("yes", "Yes! +" + pts + " 🎉");
+        C.playSound(id, "right");
+        C.speak(id, "Yes!");
+      } else {
+        say("yes", "That's it! 👍");
+        C.playSound(id, "tap");
+      }
+      state = "done";
+      setTimeout(next, reduceMotion ? 900 : 1400);
+      return;
+    }
+    // Wrong: never a harsh sound. Show why, then let them fix it.
+    btn.disabled = true;
+    btn.dataset.tried = "1"; // stays greyed out when the others come back
+    if (state === "first") {
+      misses[slot.area] = (misses[slot.area] || 0) + 1;
+      C.reportAnswer(id, { area: slot.area, label: slot.label, points: 0, firstTry: false });
+      if (round.extras < MAX_EXTRA) { // a NEW question on this skill, later in the round
+        round.extras++;
+        round.slots.push({ area: slot.area, label: slot.label, extra: true });
+      }
+      state = "fix"; wrongInFix = 0;
+      say("look", "Let's look together 👀");
+      $("explain").hidden = false;
+      setDisabled(true);
+      var ms = Q.explain(q, $("explain"), reduceMotion);
+      C.speak(id, q.why);
+      setTimeout(function () { setDisabled(false); say("look", "Now you try!"); }, ms + 200);
+      drawDots();
+    } else {
+      wrongInFix++;
+      say("look", "Look at the picture again 👀");
+      if (wrongInFix >= 2) { // still stuck: show the right one gently
+        var r = document.querySelector('.choice[data-value="' + CSS.escape(String(q.answer)) + '"]');
+        if (r) r.classList.add("glow");
+      }
+    }
+  }
+  function say(kind, text) { var f = $("feedback"); f.className = "feedback " + kind; f.textContent = text; }
+  function setDisabled(on) {
+    document.querySelectorAll(".choice").forEach(function (b) { if (!b.dataset.tried) b.disabled = on; });
+  }
+  function disableAll() { document.querySelectorAll(".choice").forEach(function (b) { b.disabled = true; }); }
+
+  function next() {
+    round.at++;
+    if (round.at < round.slots.length) ask(); else finish();
+  }
+
+  /* [JS-END] Coins, best score, mini rank and celebration. */
+  function finish() {
+    var count = round.slots.length;
+    var percent = Math.round(100 * round.points / (100 * count));
+    var coins = Math.round(round.points / 100);
+    if (coins > 0) C.addCoins(id, coins, { game: GAME_ID, label: GAME_NAME });
+    var best = C.recordBestScore(id, { game: GAME_ID + "-level-" + level, label: GAME_NAME + " (Level " + level + ")",
+      score: percent, text: percent + "%" });
+    var data = C.getGameData(id, GAME_ID);
+    var before = pizzaRank(data.rounds || 0).rank.name;
+    data.rounds = (data.rounds || 0) + 1;
+    C.setGameData(id, GAME_ID, data);
+    var after = pizzaRank(data.rounds).rank.name;
+
+    $("play").hidden = true; $("end").hidden = false;
+    $("stars").textContent = percent >= 90 ? "⭐⭐⭐" : percent >= 70 ? "⭐⭐" : "⭐";
+    $("score-text").textContent = "Score: " + percent + "% (" + round.points + " points, " + count + " questions)";
+    $("coins-won").textContent = "+" + coins + " gold " + (coins === 1 ? "coin" : "coins") + (visitor ? " (just for fun)" : "");
+    $("new-best").hidden = !best || visitor;
+    drawChef($("end-chef"), data.rounds);
+    if (after !== before) $("end-chef").appendChild(el("p", { class: "new-best", text: "New pizza rank: " + after + "! 🎉" }));
+    var sk = $("skills"), h = C.getHero(id);
+    sk.textContent = "";
+    Q.areas(level, GAME_ID).forEach(function (a) {
+      var g = h.areas[a.area];
+      var txt = g && g.recent && g.recent.length ? g.grade + "%" + (g.mastery >= C.MASTERY_MARK ? " ⭐ mastered" : "") : "not played yet";
+      sk.appendChild(el("li", null, el("span", { text: a.areaLabel }), el("strong", { text: txt })));
+    });
+    drawPlayer();
+    C.playSound(id, "coin");
+    C.speak(id, "Pizza party! You earned " + coins + " coins.");
+    if (!reduceMotion) confetti();
+    $("again-btn").focus();
+  }
+
+  function confetti() {
+    var box = el("div", { class: "confetti", "aria-hidden": "true" });
+    for (var i = 0; i < 24; i++) {
+      box.appendChild(el("span", { text: ["🍕", "🎉", "⭐", "🧀"][i % 4],
+        style: "left:" + Math.round(Math.random() * 95) + "%;animation-delay:" + (Math.random() * 0.8).toFixed(2) + "s" }));
+    }
+    document.body.appendChild(box);
+    setTimeout(function () { box.remove(); }, 3800);
+  }
+
+  $("start-btn").addEventListener("click", newRound);
+  $("again-btn").addEventListener("click", newRound);
+  C.showStorageNotice($("main"));
+  showStart();
+})();
+</script>
+</body>
+</html>

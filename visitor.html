@@ -9,6 +9,7 @@
   or tests on this page.
 
   Depends on: citadel-core.js (visitor rules in [JS-VISITOR]), citadel-core.css
+  Links to:   proving-grounds.html?id=visitor (open halls)
 
   Search these tags to jump to a section:
     [HTML-TOP]      links back
@@ -58,7 +59,7 @@
 
   <!-- [HTML-HALLS] -->
   <h2 class="halls-title">Choose a hall</h2>
-  <p class="halls-sub">The gates open soon. Games will appear here.</p>
+  <p class="halls-sub">The Proving Grounds is open. More halls open soon.</p>
   <ul class="halls" id="halls"></ul>
 </main>
 
@@ -67,7 +68,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.3.0</span>
+    <span class="version">v0.4.0</span>
   </div>
 </footer>
 
@@ -75,7 +76,7 @@
 <script>
 // [JS-VISITOR] Only draws the halls. Games opened from here will use the
 // player id "visitor" (Citadel.VISITOR_ID), which is never saved.
-Citadel.renderHalls(document.getElementById("halls"));
+Citadel.renderHalls(document.getElementById("halls"), Citadel.VISITOR_ID);
 </script>
 </body>
 </html>

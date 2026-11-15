@@ -20,7 +20,7 @@
   Search these tags to jump to a section:
     [HTML-SETUP]    first visit: create the PIN
     [HTML-UNLOCK]   enter the PIN
-    [HTML-ROSTER]   list of heroes with level, coins, rank and next test
+    [HTML-ROSTER]   list of heroes with level, coins, rank, next test and skill grades
     [HTML-TESTS]    coin amount for each of the 14 tests
     [HTML-FORM]     add or edit a hero (nickname, crest, color, level)
     [HTML-BACKUP]   backup (file or text) and restore
@@ -216,7 +216,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.3.0</span>
+    <span class="version">v0.4.0</span>
   </div>
 </footer>
 
@@ -301,7 +301,8 @@
           el("div", { class: "who", text: hero.nickname }),
           el("div", { class: "info" }, C.rankBadge(hero), " \u00B7 " + hero.coins + " gold coins"),
           el("div", { class: "info", text: "Next test: " + C.testStatusText(hero) }),
-          weakList(hero)),
+          weakList(hero),
+          skillList(hero)),
         el("div", { class: "controls" },
           el("label", null, "Level", levelSel),
           el("button", { class: "btn ghost small", type: "button", text: "Edit",
@@ -332,6 +333,15 @@
             alertOk(hero.nickname + ": " + (r.change > 0 ? "+" : "") + r.change + " coins (correction). Now " + r.hero.coins + " coins.");
           } catch (e) { err.textContent = e.message; }
         } })));
+  }
+
+  // Skill grades from games: average of the last 10 answers, star when mastered.
+  function skillList(hero) {
+    var sk = C.skillGrades(hero);
+    if (!sk.length) return el("div", { class: "info", text: "Skills: no games played yet." });
+    return el("div", { class: "info", text: "Skills: " + sk.map(function (k) {
+      return k.label + " " + k.grade + "%" + (k.mastered ? " \u2B50" : "");
+    }).join(" \u00B7 ") });
   }
 
   // Weak areas (only when a test is locked until mastery), with a check when mastered.
