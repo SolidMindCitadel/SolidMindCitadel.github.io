@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - a hero's home page (hero.html?id=...)
+  ------------------------------------------------------------
+  Purpose: one page used by every hero. The "id" in the address says
+  which hero to show: nickname, crest, gold coins, rank, level and the
+  four halls (closed for now: "Gates open soon").
+
+  Depends on: citadel-core.js, citadel-core.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      links back to the hero list
+    [HTML-HERO]     crest, nickname, coins, rank, level
+    [HTML-HALLS]    the four halls (drawn by Citadel.renderHalls)
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-HOME]       fills in the page for the chosen hero
+
+  Privacy: nicknames only; everything is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hero's Hall · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="citadel-core.css">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html">&larr; Choose another hero</a>
+    <a href="index.html">The gate</a>
+  </nav>
+
+  <!-- [HTML-HERO] Shown when the hero is found -->
+  <section id="hero-home" hidden>
+    <div class="hero-head">
+      <div id="crest-spot"></div>
+      <h1 id="hero-name"></h1>
+    </div>
+    <ul class="stats">
+      <li class="stat"><span class="label">Gold coins</span>
+        <span class="value"><span class="coin" aria-hidden="true"></span><span id="hero-coins">0</span></span></li>
+      <li class="stat"><span class="label">Rank</span><span class="value" id="hero-rank">Apprentice</span></li>
+      <li class="stat"><span class="label">Level</span><span class="value" id="hero-level">1</span></li>
+    </ul>
+
+    <!-- [HTML-HALLS] -->
+    <h2 class="halls-title">Choose a hall</h2>
+    <p class="halls-sub">The gates open soon. Games will appear here, and every win earns gold coins.</p>
+    <ul class="halls" id="halls"></ul>
+  </section>
+
+  <!-- Shown when the address has no hero, or the hero was removed -->
+  <div class="empty" id="not-found" hidden>
+    <p><strong>We couldn't find that hero.</strong></p>
+    <p>They may have been removed, or they were added on a different device.</p>
+    <a class="btn" href="heroes.html">Choose a hero</a>
+  </div>
+
+  <p class="device-note">Your coins and level are saved on this device only.</p>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.2.0</span>
+  </div>
+</footer>
+
+<script src="citadel-core.js"></script>
+<script>
+// [JS-HOME] Reads ?id=... from the address and shows that hero.
+(function () {
+  var C = window.Citadel;
+  var id = new URLSearchParams(location.search).get("id");
+  var hero = id ? C.getHero(id) : null;
+  C.showStorageNotice(document.getElementById("main"));
+
+  if (!hero) {
+    document.getElementById("not-found").hidden = false;
+    return;
+  }
+  document.title = hero.nickname + "'s Hall · SolidMind Citadel";
+  document.getElementById("crest-spot").appendChild(C.crestSvg(hero, 120));
+  document.getElementById("hero-name").textContent = hero.nickname;
+  document.getElementById("hero-coins").textContent = hero.coins;
+  document.getElementById("hero-rank").textContent = C.rankFor(hero);
+  document.getElementById("hero-level").textContent = hero.level;
+  C.renderHalls(document.getElementById("halls"));
+  document.getElementById("hero-home").hidden = false;
+})();
+</script>
+</body>
+</html>

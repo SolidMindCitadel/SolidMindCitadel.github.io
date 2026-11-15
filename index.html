@@ -5,13 +5,16 @@
   Files this page needs (upload both to the top level of the repo):
     index.html   this file
     citadel.jpg  the gate picture (name must match exactly, lowercase)
+  Links to: heroes.html (the "Enter the Citadel" button)
 
   Search these tags to jump to a section:
     [CSS-COLORS]   night and daylight color sets
     [CSS-BANNERS]  the four hall banners
     [HTML-GATE]    the gate picture at the top
+    [CSS-ENTER]    style of the "Enter the Citadel" button
+    [HTML-ENTER]   "Enter the Citadel" button (opens heroes.html)
     [HTML-HALLS]   the four halls (add links here later)
-    [HTML-FOOTER]  bottom of the page
+    [HTML-FOOTER]  bottom of the page and version number [VERSION]
 
   Public site: no kids' full names, addresses or passwords anywhere.
 -->
@@ -227,6 +230,30 @@ a.cloth:hover, a.cloth:focus-visible { transform: translateY(-4px); }
   a.cloth { transition: none; }
 }
 
+/* [CSS-ENTER] The big "Enter the Citadel" button under the motto */
+.enter {
+  display: flex;
+  justify-content: center;
+  margin: 1.75rem 0 0;
+}
+.enter a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 52px;
+  padding: .75rem 2rem;
+  font-family: "Cinzel", Georgia, serif;
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: .06em;
+  color: #1A1408;
+  background: linear-gradient(#E8B85A, #C9922E);
+  border-radius: 12px;
+  text-decoration: none;
+  box-shadow: 0 0 0 2px var(--gold-soft), 0 0 24px -4px var(--arcane);
+}
+.enter a:hover { filter: brightness(1.08); }
+
 /* [CSS-FOOTER] */
 footer {
   margin-top: clamp(3.5rem, 9vw, 6rem);
@@ -243,6 +270,7 @@ footer strong {
   font-size: 1.1rem;
   margin-bottom: .25rem;
 }
+.version { display: block; margin-top: .5rem; font-size: .8rem; opacity: .8; }
 </style>
 </head>
 <body>
@@ -262,6 +290,9 @@ footer strong {
       <span>Envision</span><span>Engineer</span><span>Create</span>
     </div>
   </header>
+
+  <!-- [HTML-ENTER] Opens the "Who enters the Citadel?" hero screen -->
+  <p class="enter"><a href="heroes.html">Enter the Citadel</a></p>
 
   <h2 class="halls-title">Choose a hall</h2>
   <p class="halls-sub">Every idea starts in the Library, gets tested in the Proving Grounds, and is built in the Forge.</p>
@@ -326,11 +357,12 @@ footer strong {
   </ul>
 </main>
 
-<!-- [HTML-FOOTER] -->
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
 <footer>
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
+    <span class="version">v0.2.0</span>
   </div>
 </footer>
 

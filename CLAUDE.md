@@ -97,6 +97,21 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   PLC rung alone as an emergency stop.
 - Virtual controller I/O never exceeds 8 DI, 4 DO, 2 AI, 2 AO, 2 RTD.
 
+## Versions and records (permanent rules, follow on every change)
+
+- **Every pull request is one version.** Numbers look like `v0.2.0`.
+  New feature: raise the middle number (v0.2.0 → v0.3.0).
+  Fix: raise the last number (v0.2.0 → v0.2.1).
+- Put the version in the **pull request title**, e.g. "v0.2.0: Hero profiles".
+- Add an entry to **`CHANGELOG.md`** (newest first): version, date, what was added or
+  changed, which files changed, and why, in plain words.
+- Show the current version in small text in the **footer of every page**. To update it,
+  search all files for the tag `[VERSION]` (each page footer) and change
+  `VERSION` in `citadel-core.js` `[JS-VERSION]`. New pages must include the footer version.
+- Add a line to the **change log at the bottom of this file** too.
+- In every pull request description, include a short **"How to undo this version"** note
+  explaining how to use GitHub's **Revert** button on the merged pull request.
+
 ## How to work with Ariet
 
 - Ariet is new to GitHub. Explain each pull request in plain words: what changed,
@@ -108,10 +123,29 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 ## Open decisions
 
 - [ ] Coins: just for fun, or tied to real rewards approved in the Treasury?
-- [ ] Treasury PIN: Ariet sets it on first use
+- [x] Treasury PIN: Ariet sets it on first use (built in v0.2.0)
+- [ ] Rank coin amounts (currently 50 / 150 / 400 / 1000): keep or change?
 - [ ] When to move the kids' games to their own repository (before sharing outside the family)
+
+## Current files
+
+| File | What it is |
+| --- | --- |
+| `index.html` | Main page (castle, four closed halls, "Enter the Citadel" button) |
+| `heroes.html` | "Who enters the Citadel?" hero cards |
+| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, halls |
+| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels |
+| `citadel-core.js` | Shared code: heroes, coins (`Citadel.addCoins`), ranks, levels, PIN, halls |
+| `citadel-core.css` | Shared look for the pages above |
+| `CHANGELOG.md` | Every version, newest first |
+
+Rank thresholds (coins ever earned): Apprentice 0, Squire 50, Knight 150, Engineer 400,
+Master Engineer 1000. First guess; Ariet may change them.
 
 ## Change log
 
 - Nov 14, 2026: Repository created. Added `index.html` (Citadel main page with four
-  closed halls), `citadel.jpg`, and this brief.
+  closed halls), `citadel.jpg`, and this brief. (v0.1.0)
+- Nov 15, 2026: **v0.2.0 Hero profiles.** Added `heroes.html`, `hero.html`, `treasury.html`,
+  `citadel-core.js`, `citadel-core.css`, `CHANGELOG.md`; "Enter the Citadel" button and footer
+  version on `index.html`; version rules above. Rewards/payouts not built yet.
