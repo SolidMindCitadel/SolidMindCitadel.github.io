@@ -39,7 +39,7 @@ The oldest is also the **beta tester for the PLC games** in the Nexus.
 | The Imperial Library | Envision / learn | Reading, spelling, science facts |
 | The Proving Grounds | Check / test | Math challenges, quizzes |
 | The Forge | Create / build | Logic and building puzzles (patterns, sequences, simple circuits) |
-| The Nexus | Where it connects | PLC and controls games (son's area) |
+| The Nexus | Where it connects | PLC and controls games (PLC beta tester's area) |
 
 Main page: `index.html` (castle picture `citadel.jpg`, four hanging banners).
 A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
@@ -132,6 +132,62 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - **Test coin amounts are starting numbers** that Ariet can change in the Treasury:
   20, 30, 50, 60, 80, 110, 120, 150, 200, 220, 260, 320, 350, 400 (tests 1–14).
 
+## Hero page features (built in v0.3.0)
+
+- **Treasure chest:** every coin change is logged in the hero's coin history (date, + or −,
+  where it came from). Games add coins with
+  `Citadel.addCoins(heroId, amount, { game: "game-id", label: "Game Name" })`; this also adds to
+  that game's total. Other sources: test fail, "Correction" (Treasury), "Parent preview" (test.html).
+- **No parent coin rewards.** The Treasury only has a "Correct coins" box per hero to fix
+  mistakes, with a reason (shown as "Correction"). Parent rewards will be gold dust (see Planned).
+- **Trophy hall:** a dated badge for every tier/rank reached (Apprentice – Bronze from the day the
+  hero joins). Best scores come from games: `Citadel.recordBestScore(heroId, { game, label, score,
+  text, lowerIsBetter })`. Until then it says "Play a game to earn your first trophy."
+- **Settings per hero:** Sound and "Read words out loud", set by the kid on their page. Games use
+  `Citadel.getSettings(heroId)`, `Citadel.playSound(heroId, "coin"|"right"|"wrong"|"tap")` and
+  `Citadel.speak(heroId, text)`; the last two already respect the settings.
+- **Backup and restore** (Treasury, behind the PIN): a file or copied text with everything on the
+  device, including the test coin amounts and the PIN (scrambled). Restoring replaces everything.
+  Backups contain nicknames: never commit one to this public repository.
+- **Visitor mode:** "Play as a visitor" on heroes.html opens `visitor.html`. Games use the player
+  id `Citadel.VISITOR_ID` ("visitor"). Visitors can play, but nothing is saved: coins vanish when
+  they leave, no trophies, no treasure chest, and no rank tests.
+
+## Planned (not built yet): hidden quests and special events
+
+- A hidden quest appears when a hero reaches each new rank: Squire, Knight,
+  Engineer, Master Engineer. Kids don't know about quests until one appears.
+- The quest is a race-to-the-finish board game against the computer, with
+  questions covering everything the hero should have learned up to that rank.
+- The computer gets harder to beat at each rank: easy to beat at Squire,
+  medium at Knight, hard at Engineer, hardest at Master Engineer.
+- Movement uses the dice rules from Ariet's snake and ladder game. Those
+  rules are not in this repository yet; ask Ariet for them before building.
+- Completing a quest earns a real-money reward, $5 by default, amount
+  changeable in the Treasury.
+- The parent controls quests both ways: an on/off switch per hero, and the
+  parent approves each quest before it appears to the kid.
+- Special events: the parent triggers them from the Treasury at any time.
+  They never change rank or tier. They show the parent how well the hero is
+  doing. Afterwards the parent may award hint tokens (spent on hints in
+  games) or decide on a money reward.
+- Build quests and events only after the first games exist, since they use
+  the games' questions.
+
+## Planned (not built yet): treasures
+
+- Gold coins come from games and unlock tests.
+- Gold dust is only given by the parent (special events and rewards) and is spent on
+  hints in games (1 hint = 10 dust).
+- 100 gold dust can be traded for 1 gold nugget.
+- A gold brick is worth $5 real money: a hidden quest win gives 1 brick, or a hero can
+  melt nuggets into a brick (10 nuggets per brick to start), but only after reaching
+  Knight and only once the parent releases the melting feature, which may be its own
+  special quest.
+- Every exchange number (dust per nugget, nuggets per brick, hint cost, brick value) must
+  be changeable in the Treasury.
+- The goal is to teach saving vs. spending.
+
 ## Versions and records (permanent rules, follow on every change)
 
 - **Every pull request is one version.** Numbers look like `v0.2.0`.
@@ -173,10 +229,11 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 | --- | --- |
 | `index.html` | Main page (castle, four closed halls, "Enter the Citadel" button) |
 | `heroes.html` | "Who enters the Citadel?" hero cards |
-| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, halls |
-| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, hero progress, test coin amounts |
+| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, halls, treasure chest, trophy hall, settings |
+| `visitor.html` | Visitor page for friends: halls only, nothing saved |
+| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, hero progress, correct coins, test coin amounts, backup and restore |
 | `test.html` | A hero's next test (`test.html?id=...`): placeholder until real questions, parent preview |
-| `citadel-core.js` | Shared code: heroes, coins, rank ladder, tests, area scores, levels, PIN, halls |
+| `citadel-core.js` | Shared code: heroes, coins and history, rank ladder, tests, area scores, trophies, settings, visitor, backup, levels, PIN, halls |
 | `citadel-core.css` | Shared look for the pages above |
 | `CHANGELOG.md` | Every version, newest first |
 
@@ -191,3 +248,7 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - Nov 15, 2026: **v0.2.1 Privacy fix, working rules and preview labels.** Removed the kids'
   ages from this file; added the "Claude checks everything, exact steps" working rule;
   test.html preview buttons now show the exact scores (11 of 12, 91.7% / 7 of 12, 58.3%).
+- Nov 15, 2026: **v0.3.0 Treasure chest, trophies, settings, backup and visitor mode.** Hero page
+  gets coin history and per-game totals, trophy hall, Sound/Read-aloud settings; Treasury gets
+  "Correct coins" and backup/restore; new `visitor.html`; Nexus site-map note reworded; planned hidden
+  quests, special events and treasures written down above (not built).

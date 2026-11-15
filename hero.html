@@ -4,8 +4,11 @@
   ------------------------------------------------------------
   Purpose: one page used by every hero. The "id" in the address says
   which hero to show: nickname, crest, gold coins, rank and tier
-  (e.g. "Squire – Silver"), level, their next test, and the four halls
-  (closed for now: "Gates open soon").
+  (e.g. "Squire – Silver"), level, their next test, the four halls
+  (closed for now: "Gates open soon"), the treasure chest (coin
+  history and coins per game), the trophy hall (badges and best
+  scores) and the hero's own settings (Sound, Read words out loud).
+  Visitors are sent to visitor.html instead.
 
   Depends on: citadel-core.js, citadel-core.css
 
@@ -14,8 +17,14 @@
     [HTML-HERO]     crest, nickname, coins, rank and tier, level
     [HTML-TEST]     the hero's next test and its status
     [HTML-HALLS]    the four halls (drawn by Citadel.renderHalls)
+    [HTML-CHEST]    treasure chest: coins per game and coin history
+    [HTML-TROPHIES] trophy hall: rank/tier badges and best scores
+    [HTML-SETTINGS] Sound and Read words out loud switches
     [HTML-FOOTER]   bottom of the page and version number
     [JS-HOME]       fills in the page for the chosen hero
+    [JS-CHEST]      draws the treasure chest
+    [JS-TROPHIES]   draws the trophy hall
+    [JS-SETTINGS]   the two switches
 
   Privacy: nicknames only; everything is saved on this device only.
 -->
@@ -67,6 +76,38 @@
     <h2 class="halls-title">Choose a hall</h2>
     <p class="halls-sub">The gates open soon. Games will appear here, and every win earns gold coins.</p>
     <ul class="halls" id="halls"></ul>
+
+    <!-- [HTML-CHEST] -->
+    <section class="panel" aria-labelledby="chest-title">
+      <h2 id="chest-title"><span class="coin" aria-hidden="true"></span>Treasure chest</h2>
+      <p>Where your gold coins came from.</p>
+      <h3 class="sub-title">Coins from each game</h3>
+      <ul class="totals" id="game-totals"></ul>
+      <p class="hint" id="no-game-coins">No game coins yet. Games will add them here.</p>
+      <h3 class="sub-title">Coin history <span class="hint">(newest first)</span></h3>
+      <ol class="history" id="history"></ol>
+      <p class="hint" id="no-history">Nothing yet. Coins you earn or lose will show up here.</p>
+      <div class="btn-row" id="more-row" hidden><button class="btn ghost small" type="button" id="more-btn">Show more</button></div>
+    </section>
+
+    <!-- [HTML-TROPHIES] -->
+    <section class="panel" aria-labelledby="trophy-title">
+      <h2 id="trophy-title">Trophy hall</h2>
+      <h3 class="sub-title">Rank badges</h3>
+      <ul class="badges" id="badges"></ul>
+      <h3 class="sub-title">Best scores</h3>
+      <ul class="totals" id="best-scores"></ul>
+      <p class="hint" id="no-scores">Play a game to earn your first trophy.</p>
+    </section>
+
+    <!-- [HTML-SETTINGS] The hero can change these; games read them from citadel-core.js -->
+    <section class="panel" aria-labelledby="settings-title">
+      <h2 id="settings-title">My settings</h2>
+      <label class="switch"><input type="checkbox" role="switch" id="set-sound"> <span>Sound</span></label>
+      <label class="switch"><input type="checkbox" role="switch" id="set-read"> <span>Read words out loud</span></label>
+      <p class="hint" id="no-speech" hidden>This browser can't read words out loud, so that switch won't do anything here.</p>
+      <p class="hint">Only for you, and only on this device.</p>
+    </section>
   </section>
 
   <!-- Shown when the address has no hero, or the hero was removed -->
@@ -76,7 +117,7 @@
     <a class="btn" href="heroes.html">Choose a hero</a>
   </div>
 
-  <p class="device-note">Your coins and level are saved on this device only.</p>
+  <p class="device-note">Your coins, trophies and settings are saved on this device only.</p>
 </main>
 
 <!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
@@ -84,7 +125,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.2.1</span>
+    <span class="version">v0.3.0</span>
   </div>
 </footer>
 
@@ -94,6 +135,7 @@
 (function () {
   var C = window.Citadel;
   var id = new URLSearchParams(location.search).get("id");
+  if (C.isVisitor(id)) { location.replace("visitor.html"); return; } // visitors have their own page
   var hero = id ? C.getHero(id) : null;
   C.showStorageNotice(document.getElementById("main"));
 
@@ -136,6 +178,69 @@
     document.querySelector(".halls-sub").textContent =
       "New games stay closed until your test is done. Games you already have can still be played.";
   }
+
+  var el = C.el;
+  function $(x) { return document.getElementById(x); }
+  // Dates are saved as "2026-11-15"; show them the way this device likes.
+  function niceDate(d) {
+    if (!d) return "Earlier";
+    var t = new Date(d + "T12:00:00");
+    return isNaN(t) ? d : t.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+  }
+
+  /* [JS-CHEST] Coins per game, then the history, 20 lines at a time. */
+  var totals = C.gameTotals(hero);
+  totals.forEach(function (t) {
+    $("game-totals").appendChild(el("li", null, el("span", { text: t.label }), el("strong", { text: t.coins + " coins" })));
+  });
+  $("no-game-coins").hidden = totals.length > 0;
+
+  var history = C.coinHistory(hero), shown = 0;
+  function showMore() {
+    history.slice(shown, shown + 20).forEach(function (h) {
+      var plus = h.amount > 0;
+      $("history").appendChild(el("li", null,
+        el("span", { class: "when", text: niceDate(h.date) }),
+        el("span", { class: "what", text: h.label + (h.note ? " (" + h.note + ")" : "") }),
+        el("strong", { class: plus ? "plus" : "minus",
+          text: (plus ? "+" : "\u2212") + Math.abs(h.amount),
+          "aria-label": (plus ? "plus " : "minus ") + Math.abs(h.amount) + " coins" })));
+    });
+    shown = Math.min(history.length, shown + 20);
+    $("more-row").hidden = shown >= history.length;
+  }
+  $("more-btn").addEventListener("click", showMore);
+  showMore();
+  $("no-history").hidden = history.length > 0;
+
+  /* [JS-TROPHIES] A medal for every tier and rank reached, newest first. */
+  C.trophies(hero).forEach(function (t) {
+    $("badges").appendChild(el("li", { class: "badge tier-" + t.tier.toLowerCase() },
+      el("span", { class: "medal big", "aria-hidden": "true" }),
+      el("span", { class: "badge-name", text: t.label }),
+      el("span", { class: "hint", text: niceDate(t.date) })));
+  });
+  var best = C.bestScores(hero);
+  best.forEach(function (b) {
+    $("best-scores").appendChild(el("li", null, el("span", { text: b.label }),
+      el("strong", { text: b.text }), el("span", { class: "hint", text: niceDate(b.date) })));
+  });
+  $("no-scores").hidden = best.length > 0;
+
+  /* [JS-SETTINGS] Saved right away. Turning one on gives a small sample. */
+  var set = C.getSettings(hero.id);
+  $("set-sound").checked = set.sound;
+  $("set-read").checked = set.readAloud;
+  $("no-speech").hidden = C.canSpeak();
+  $("set-sound").addEventListener("change", function () {
+    C.setSetting(hero.id, "sound", this.checked);
+    C.playSound(hero.id, "coin");
+  });
+  $("set-read").addEventListener("change", function () {
+    C.setSetting(hero.id, "readAloud", this.checked);
+    C.speak(hero.id, "Read words out loud is on.");
+  });
+
   document.getElementById("hero-home").hidden = false;
 })();
 </script>

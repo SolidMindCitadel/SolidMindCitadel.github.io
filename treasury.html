@@ -5,7 +5,10 @@
   Purpose: behind a 4-digit PIN, a parent can add, edit and remove
   heroes, set each hero's level (1, 2 or 3), see each hero's progress
   (rank and tier, coins, next test status, weak areas) and change the
-  coin amount for each of the 14 tests.
+  coin amount for each of the 14 tests. Each hero has a "Correct coins"
+  box to fix mistakes (with a reason; shown as "Correction" in the
+  hero's coin history). Backup and restore keep progress safe, because
+  everything lives on this one device.
   On first use it asks the parent to create the PIN.
   Rewards and payouts come in a later version.
 
@@ -20,11 +23,14 @@
     [HTML-ROSTER]   list of heroes with level, coins, rank and next test
     [HTML-TESTS]    coin amount for each of the 14 tests
     [HTML-FORM]     add or edit a hero (nickname, crest, color, level)
+    [HTML-BACKUP]   backup (file or text) and restore
     [HTML-PIN]      change PIN, lock, forgot PIN
     [HTML-FOOTER]   bottom of the page and version number
     [JS-VIEWS]      switches between setup / unlock / manage
     [JS-ROSTER]     draws the hero list
     [JS-TESTS]      the test coin table (save / back to starting numbers)
+    [JS-CORRECT]    "Correct coins" box for each hero
+    [JS-BACKUP]     download / copy a backup, restore from a file or text
     [JS-FORM]       add / edit hero form
     [JS-PINS]       create, check and change the PIN; reset
 
@@ -78,7 +84,8 @@
     <details style="margin-top:1.25rem">
       <summary style="cursor:pointer;min-height:44px">Forgot the PIN?</summary>
       <p>The only way back in is to <strong>erase the Treasury on this device</strong>: all heroes,
-        levels and coins here are deleted, and you create a new PIN. Other devices are not affected.</p>
+        levels and coins here are deleted, and you create a new PIN. Other devices are not affected.
+        (Restoring a backup afterwards brings back the PIN that was saved in that backup.)</p>
       <label for="reset-word">Type ERASE to confirm</label>
       <input id="reset-word" type="text" autocomplete="off" autocapitalize="characters">
       <div class="btn-row"><button class="btn danger" type="button" id="reset-btn">Erase everything here</button></div>
@@ -147,6 +154,42 @@
       </div>
     </form>
 
+    <!-- [HTML-BACKUP] -->
+    <section class="panel" aria-labelledby="backup-title">
+      <h2 id="backup-title">Backup and restore</h2>
+      <p><strong>Why backups matter:</strong> all heroes, coins, ranks, tests, trophies and settings live only
+        in this browser on this device. They are not stored online. If this browser's data is cleared, the
+        device is lost, or you switch devices, everything is gone, unless you have a backup.</p>
+      <p>A backup also holds the test coin amounts and the Treasury PIN (scrambled). Make one now and then,
+        and keep it somewhere safe, like your own email or files. <strong>Never upload a backup to the
+        GitHub repository</strong>: it is public, and backups contain the kids' nicknames.</p>
+
+      <h3 class="sub-title">Make a backup</h3>
+      <div class="btn-row">
+        <button class="btn" type="button" id="backup-download">Download backup file</button>
+        <button class="btn ghost" type="button" id="backup-show">Show backup text</button>
+      </div>
+      <div id="backup-out" hidden>
+        <label for="backup-text">Backup text (select it all and copy)</label>
+        <textarea class="backup-text" id="backup-text" readonly></textarea>
+        <div class="btn-row"><button class="btn ghost small" type="button" id="backup-copy">Copy text</button></div>
+      </div>
+      <p class="ok" id="backup-msg" role="status"></p>
+
+      <h3 class="sub-title">Restore from a backup</h3>
+      <div class="warning-box">
+        <strong>Warning:</strong> restoring <strong>replaces everything on this device</strong> with the backup:
+        every hero, coin, rank, test, trophy and setting, the test coin amounts and the PIN.
+        Anything here that isn't in the backup will be lost.
+      </div>
+      <label for="restore-file">Choose a backup file</label>
+      <input type="file" id="restore-file" accept=".json,.txt,application/json,text/plain">
+      <label for="restore-text">…or paste backup text</label>
+      <textarea class="backup-text" id="restore-text" spellcheck="false"></textarea>
+      <p class="error" id="restore-error" role="alert"></p>
+      <div class="btn-row"><button class="btn danger" type="button" id="restore-btn">Restore and replace everything</button></div>
+    </section>
+
     <!-- [HTML-PIN] -->
     <section class="panel">
       <h2>PIN and lock</h2>
@@ -173,7 +216,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.2.1</span>
+    <span class="version">v0.3.0</span>
   </div>
 </footer>
 
@@ -264,8 +307,31 @@
           el("button", { class: "btn ghost small", type: "button", text: "Edit",
             "aria-label": "Edit " + hero.nickname, onclick: function () { editHero(hero.id); } }),
           el("button", { class: "btn danger small", type: "button", text: "Remove",
-            "aria-label": "Remove " + hero.nickname, onclick: function () { removeHero(hero); } }))));
+            "aria-label": "Remove " + hero.nickname, onclick: function () { removeHero(hero); } })),
+        correctBox(hero)));
     });
+  }
+
+  /* [JS-CORRECT] Fix a mistake in a hero's coins: plus or minus, with a reason.
+     Not a reward (parent rewards will be gold dust later). */
+  function correctBox(hero) {
+    var amount = el("input", { type: "text", inputmode: "text", id: "fix-amt-" + hero.id, autocomplete: "off", placeholder: "e.g. 5 or -5" });
+    var reason = el("input", { type: "text", id: "fix-why-" + hero.id, autocomplete: "off", maxlength: 80, placeholder: "e.g. counted twice by mistake" });
+    var err = el("p", { class: "error", role: "alert" });
+    return el("details", { class: "correct" },
+      el("summary", { text: "Correct coins" }),
+      el("p", { class: "hint", text: "Only to fix a mistake. Use a minus sign to take coins away (like -5). Shows as \u201cCorrection\u201d in " + hero.nickname + "'s coin history." }),
+      el("label", { for: amount.id, text: "Coins to add or take away" }), amount,
+      el("label", { for: reason.id, text: "Reason" }), reason,
+      err,
+      el("div", { class: "btn-row" }, el("button", { class: "btn small", type: "button", text: "Save correction",
+        onclick: function () {
+          try {
+            var r = C.correctCoins(hero.id, amount.value.replace("\u2212", "-"), reason.value);
+            drawRoster();
+            alertOk(hero.nickname + ": " + (r.change > 0 ? "+" : "") + r.change + " coins (correction). Now " + r.hero.coins + " coins.");
+          } catch (e) { err.textContent = e.message; }
+        } })));
   }
 
   // Weak areas (only when a test is locked until mastery), with a check when mastered.
@@ -279,6 +345,64 @@
     });
     return ul;
   }
+
+  /* [JS-BACKUP] */
+  function backupName() { return "citadel-backup-" + new Date().toISOString().slice(0, 10) + ".json"; }
+  $("backup-download").addEventListener("click", function () {
+    try {
+      var blob = new Blob([C.makeBackup()], { type: "application/json" });
+      var url = URL.createObjectURL(blob);
+      var a = el("a", { href: url, download: backupName() });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      $("backup-msg").textContent = "Backup file made: " + backupName() + ". Check your Downloads (or Files on a phone).";
+    } catch (e) {
+      $("backup-msg").textContent = "This browser couldn't make a file. Use \u201cShow backup text\u201d instead.";
+    }
+  });
+  $("backup-show").addEventListener("click", function () {
+    $("backup-text").value = C.makeBackup();
+    $("backup-out").hidden = false;
+    $("backup-text").focus(); $("backup-text").select();
+  });
+  $("backup-copy").addEventListener("click", function () {
+    var t = $("backup-text");
+    function done(ok) { $("backup-msg").textContent = ok ? "Backup text copied. Paste it somewhere safe." : "Select the text and copy it yourself."; }
+    t.select();
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t.value).then(function () { done(true); }, function () {
+        try { done(document.execCommand("copy")); } catch (e) { done(false); }
+      });
+    } else {
+      try { done(document.execCommand("copy")); } catch (e) { done(false); }
+    }
+  });
+  // Choosing a file puts its text in the paste box, so both ways restore the same way.
+  $("restore-file").addEventListener("change", function () {
+    var f = this.files && this.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () { $("restore-text").value = reader.result; $("restore-error").textContent = ""; };
+    reader.onerror = function () { $("restore-error").textContent = "That file couldn't be read."; };
+    reader.readAsText(f);
+  });
+  $("restore-btn").addEventListener("click", function () {
+    var text = $("restore-text").value;
+    if (!text.trim()) { $("restore-error").textContent = "Choose a backup file or paste backup text first."; return; }
+    var info;
+    try { info = C.readBackup(text); } catch (e) { $("restore-error").textContent = e.message; return; }
+    var when = info.made ? new Date(info.made).toLocaleString() : "an unknown date";
+    var sure = window.confirm("This backup has " + info.heroes + " hero(es), made " + when + ".\n\n" +
+      "Restoring REPLACES EVERYTHING on this device, including the PIN. This can't be undone.\n\nRestore now?");
+    if (!sure) return;
+    var saved = C.restoreBackup(text);
+    $("restore-error").textContent = "";
+    $("restore-text").value = ""; $("restore-file").value = "";
+    resetForm(); drawRoster(); drawCoinTable(C.getTestCoins());
+    $("backup-msg").textContent = saved
+      ? "Restored " + info.heroes + " hero(es). The Treasury PIN is now the one from the backup."
+      : "Restored for now, but this browser isn't saving, so it will be lost when the page closes.";
+  });
 
   /* [JS-TESTS] One row per test, with a number box for its coin amount. */
   function drawCoinTable(values) {

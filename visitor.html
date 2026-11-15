@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - visitor page (visitor.html)
+  ------------------------------------------------------------
+  Purpose: friends can "Play as a visitor". They see the four halls and
+  will be able to play games from here once games exist. Nothing a
+  visitor does is saved: coins are not kept, progress is lost when they
+  leave, and they cannot take rank tests. No treasure chest, trophies
+  or tests on this page.
+
+  Depends on: citadel-core.js (visitor rules in [JS-VISITOR]), citadel-core.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      links back
+    [HTML-VISITOR]  welcome and the "nothing is saved" note
+    [HTML-HALLS]    the four halls (drawn by Citadel.renderHalls)
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-VISITOR]    draws the halls
+
+  Privacy: visitors type nothing and nothing is saved.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Visitor · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="citadel-core.css">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html">&larr; Back to the heroes</a>
+    <a href="index.html">The gate</a>
+  </nav>
+
+  <!-- [HTML-VISITOR] -->
+  <header class="page-title">
+    <div class="visitor-crest" aria-hidden="true">&#x1F3F0;</div>
+    <h1>Welcome, Visitor!</h1>
+    <p>You can play the Citadel's games as our guest.</p>
+  </header>
+
+  <section class="panel" aria-labelledby="visitor-rules">
+    <h2 id="visitor-rules">Playing as a visitor</h2>
+    <ul class="rules">
+      <li>You can play the games in the halls.</li>
+      <li>Nothing is saved. When you leave or close the page, your progress is gone.</li>
+      <li>Coins you win are only for fun while you play. They are not kept.</li>
+      <li>Visitors can't take rank tests or earn trophies.</li>
+    </ul>
+  </section>
+
+  <!-- [HTML-HALLS] -->
+  <h2 class="halls-title">Choose a hall</h2>
+  <p class="halls-sub">The gates open soon. Games will appear here.</p>
+  <ul class="halls" id="halls"></ul>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.3.0</span>
+  </div>
+</footer>
+
+<script src="citadel-core.js"></script>
+<script>
+// [JS-VISITOR] Only draws the halls. Games opened from here will use the
+// player id "visitor" (Citadel.VISITOR_ID), which is never saved.
+Citadel.renderHalls(document.getElementById("halls"));
+</script>
+</body>
+</html>

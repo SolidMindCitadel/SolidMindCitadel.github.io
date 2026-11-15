@@ -7,6 +7,43 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.3.0 – Treasure chest, trophies, settings, backup and visitor mode – Nov 15, 2026
+
+**What was added**
+- **Treasure chest** on each hero's page: coins earned from each game, and the coin history,
+  newest first, with the date, the amount (+ or −) and where it came from (a game, a test not
+  passed, a correction, or the parent preview). Games will report coins through `citadel-core.js`.
+- **Trophy hall** on each hero's page: a dated badge for every tier and rank reached
+  (Apprentice – Bronze from the day the hero joined) and a "Best scores" section for games.
+  Until games exist it says "Play a game to earn your first trophy."
+- **My settings** on each hero's page: Sound on/off and "Read words out loud" on/off (the
+  browser's built-in speech). The kid can change them; games will read them.
+- **Correct coins** in the Treasury: per hero, add or take away coins to fix a mistake, with a
+  reason. Shows as "Correction" in the coin history. (Parent rewards will be gold dust later.)
+- **Backup and restore** in the Treasury: download a backup file or copy the backup text;
+  restore from either, with a clear warning that it replaces everything on the device. The
+  Treasury explains why backups matter.
+- **Visitor mode:** a "Play as a visitor" button on the heroes screen opens a visitor page.
+  Visitors can play games (once they exist), but nothing is saved, coins aren't kept, and they
+  can't take rank tests.
+- `CLAUDE.md`: the Nexus row of the site map now says "PLC beta tester's area"; new sections describe the hero page
+  features and the planned hidden quests, special events and treasures (gold dust, nuggets,
+  bricks). Those planned parts are not built.
+- Heroes saved by v0.2.x are upgraded automatically: coins they already had appear as one line,
+  "Coins from before the history began", and badges for steps already reached say "Earlier".
+
+**Files changed**
+- New: `visitor.html`
+- Changed: `citadel-core.js`, `citadel-core.css`, `hero.html`, `heroes.html`, `treasury.html`,
+  `test.html`, `index.html` (version), `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+So each kid can see where their coins came from and what they've achieved, choose sound and
+read-aloud for themselves, and so progress (which lives on one device only) can be backed up.
+Visitor mode lets friends play without changing anyone's progress.
+
+---
+
 ## v0.2.1 – Privacy fix, working rules and preview labels – Nov 15, 2026
 
 **What was changed**
