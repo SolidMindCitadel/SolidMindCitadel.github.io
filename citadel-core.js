@@ -32,7 +32,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.2.0";
+  var VERSION = "0.2.1";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]

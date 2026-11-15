@@ -21,9 +21,9 @@ to separate").
 
 ## Who uses it
 
-Three kids: ages **11**, **8** and **7**. Every game needs difficulty levels so all
-three can play the same game at their own level. The 11-year-old is also the
-**beta tester for the PLC games** in the Nexus.
+Three kids at different levels, from early elementary to middle school. Every game
+needs Level 1, 2 and 3 so all of them can play the same game at their own level.
+The oldest is also the **beta tester for the PLC games** in the Nexus.
 
 ## Privacy rules (public site, never break these)
 
@@ -154,6 +154,12 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
 - Small pull requests, one feature at a time. Don't jump ahead to later steps.
 - Don't guess about details that aren't in this file; ask.
 - Add a line to the change log below with every merged change.
+- Ariet copies and pastes exactly what Claude gives him and does not change code
+  himself. So Claude is fully responsible for checking every change before handing it
+  over: privacy (nothing personal in public files), correctness, and that the site still
+  works. Give Ariet exact step-by-step instructions, naming the exact button and where it
+  is on the screen. If anything is unclear or could go more than one way, ask Ariet
+  before doing it.
 
 ## Open decisions
 
@@ -182,3 +188,6 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   `test.html`, `citadel-core.js`, `citadel-core.css`, `CHANGELOG.md`; "Enter the Citadel" button
   and footer version on `index.html`; version rules and rank ladder/test rules above.
   Rewards/payouts and real test questions not built yet.
+- Nov 15, 2026: **v0.2.1 Privacy fix, working rules and preview labels.** Removed the kids'
+  ages from this file; added the "Claude checks everything, exact steps" working rule;
+  test.html preview buttons now show the exact scores (11 of 12, 91.7% / 7 of 12, 58.3%).
