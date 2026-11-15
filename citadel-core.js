@@ -8,7 +8,8 @@
   (games in games/ will use "../citadel-core.js").
 
   Depends on: nothing. No frameworks, no server.
-  Used by:    heroes.html, hero.html, treasury.html, test.html, visitor.html
+  Used by:    every page: heroes.html, hero.html, treasury.html, test.html,
+              visitor.html, proving-grounds.html, games/*.html
 
   Search these tags to jump to a section:
     [JS-VERSION]   the site version number
@@ -18,7 +19,8 @@
     [JS-LEVELS]    Level 1 / 2 / 3
     [JS-RANKS]     Apprentice to Master Engineer, Bronze/Silver/Gold tiers
     [JS-TESTS]     the 14 tests, their rules, grading and coin amounts
-    [JS-AREAS]     games report area scores; 90% mastery unlocks a locked test
+    [JS-AREAS]     games report every answer; skill grades and 90% mastery
+    [JS-GAMES]     which games a hero may play, and each game's own saved data
     [JS-HEROES]    add, edit, remove and read heroes
     [JS-COINS]     gold coins, coin history and per-game totals (the treasure chest)
     [JS-CORRECT]   parent "Correct coins" from the Treasury
@@ -37,7 +39,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.3.0";
+  var VERSION = "0.4.0";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]
@@ -125,6 +127,7 @@
       for (var s = 0; s <= h.step; s++) h.trophies.push({ step: s, date: s === 0 ? (h.created || null) : null });
     }
     if (!h.bestScores || typeof h.bestScores !== "object") h.bestScores = {};
+    if (!h.games || typeof h.games !== "object") h.games = {}; // added in v0.4.0
     if (!h.settings || typeof h.settings !== "object") h.settings = {};
     if (typeof h.settings.sound !== "boolean") h.settings.sound = DEFAULT_SETTINGS.sound;
     if (typeof h.settings.readAloud !== "boolean") h.settings.readAloud = DEFAULT_SETTINGS.readAloud;
@@ -355,13 +358,74 @@
     return { result: result, outcome: outcome, hero: hero };
   }
 
-  /* [JS-AREAS] Games call this after a round to report how the hero did
-     in ONE area (a percent from 0 to 100). Each game decides how its
-     percent is measured (e.g. 9 wins out of 10 = 90, or accuracy).
-     The best score per area is kept in hero.areas. If the hero's test
-     is locked and this is one of its weak areas at 90% or more, that
-     area counts as mastered. When every weak area is mastered, the test
-     resets to a fresh test (rule 5). Returns the updated hero. */
+  /* [JS-AREAS] Skill ("area") scores.
+     Games call Citadel.reportAnswer after EVERY question:
+         Citadel.reportAnswer(heroId, { area: "count-1-10", label: "Counting slices",
+                                        points: 100, firstTry: true })
+       points    0-100 for that question (0 = wrong). Each game decides
+                 its points; Pizza Party uses 100 / 90 / 80 ... (see CLAUDE.md).
+       firstTry  true only if the hero got it right on the first try.
+     For each area we keep the last 10 answers and work out:
+       grade    = average points of those (up to) 10 answers. It rises as a
+                  kid starts getting things right, because old answers drop off.
+       mastery  = how many of the last 10 were right on the first try, x 10.
+                  Fewer than 10 answers can't reach 90%, so "mastered" really
+                  means 9 or 10 out of the last 10.
+     If the hero's test is locked and this area is one of its weak areas,
+     mastery of 90%+ counts it as mastered (rule 5); when every weak area is
+     mastered the test resets to a fresh test.
+     Citadel.reportAreaScore(heroId, area, percent) is the older, simpler
+     call that reports a mastery percent directly (games may still use it). */
+  var RECENT_MAX = 10;
+
+  function emptyArea(label) { return { label: label || "", recent: [], grade: 0, mastery: 0, best: 0, last: 0, answered: 0 }; }
+
+  function fillArea(hero, area, label) {
+    var a = hero.areas[area];
+    if (!a || typeof a !== "object") a = hero.areas[area] = emptyArea(label);
+    if (!Array.isArray(a.recent)) a.recent = [];
+    if (label) a.label = label;
+    ["grade", "mastery", "best", "last", "answered"].forEach(function (k) { if (typeof a[k] !== "number") a[k] = 0; });
+    return a;
+  }
+
+  // Counts a weak area as mastered when the mastery percent is high enough.
+  function applyMastery(hero, area, percent) {
+    var t = hero.test;
+    if (t && t.locked && percent >= MASTERY_MARK && t.mastered.indexOf(area) < 0 &&
+        t.weakAreas.some(function (w) { return w.id === area; })) {
+      t.mastered.push(area);
+      if (t.mastered.length >= t.weakAreas.length) hero.test = freshTest();
+    }
+  }
+
+  function heroForWrite(heroId) {
+    if (heroId === VISITOR_ID) return { hero: visitorHero(), data: null }; // visitors: memory only
+    var data = load();
+    var i = findById(data.heroes, heroId);
+    return i < 0 ? null : { hero: data.heroes[i], data: data };
+  }
+
+  function reportAnswer(heroId, ans) {
+    ans = ans || {};
+    var area = String(ans.area || "");
+    var points = Math.max(0, Math.min(100, Math.round(Number(ans.points) || 0)));
+    if (!area) return null;
+    var w = heroForWrite(heroId);
+    if (!w) return null;
+    var a = fillArea(w.hero, area, ans.label ? String(ans.label) : "");
+    a.recent.push({ p: points, f: !!ans.firstTry && points > 0 });
+    if (a.recent.length > RECENT_MAX) a.recent.splice(0, a.recent.length - RECENT_MAX);
+    a.answered += 1;
+    a.grade = Math.round(a.recent.reduce(function (sum, r) { return sum + r.p; }, 0) / a.recent.length);
+    a.mastery = a.recent.filter(function (r) { return r.f; }).length * (100 / RECENT_MAX);
+    a.last = a.mastery;
+    a.best = Math.max(a.best, a.mastery);
+    applyMastery(w.hero, area, a.mastery);
+    if (w.data) save(w.data);
+    return { grade: a.grade, mastery: a.mastery, answered: a.answered, mastered: a.mastery >= MASTERY_MARK };
+  }
+
   function reportAreaScore(heroId, area, percent) {
     area = String(area || "");
     percent = Number(percent);
@@ -371,16 +435,55 @@
     var i = findById(data.heroes, heroId);
     if (i < 0) return null;
     var hero = data.heroes[i];
-    var prev = hero.areas[area];
-    hero.areas[area] = { best: prev ? Math.max(prev.best, percent) : percent, last: percent };
-    var t = hero.test;
-    if (t.locked && percent >= MASTERY_MARK && t.mastered.indexOf(area) < 0 &&
-        t.weakAreas.some(function (a) { return a.id === area; })) {
-      t.mastered.push(area);
-      if (t.mastered.length >= t.weakAreas.length) hero.test = freshTest();
-    }
+    var a = fillArea(hero, area, "");
+    a.best = Math.max(a.best, percent);
+    a.last = percent;
+    applyMastery(hero, area, percent);
     save(data);
     return hero;
+  }
+
+  // [{id, label, grade, mastery, answered, mastered}] for a hero, for pages to show.
+  function skillGrades(hero) {
+    var out = [];
+    for (var k in hero.areas) {
+      if (!Object.prototype.hasOwnProperty.call(hero.areas, k)) continue;
+      var a = hero.areas[k];
+      if (!a || !Array.isArray(a.recent) || !a.recent.length) continue;
+      out.push({ id: k, label: a.label || k, grade: a.grade, mastery: a.mastery,
+        answered: a.answered, mastered: a.mastery >= MASTERY_MARK });
+    }
+    return out;
+  }
+
+  /* [JS-GAMES] Which games a hero may play, and each game's own data.
+     STARTER_GAMES are games every hero has from the start. They are
+     never blocked by rule 6 ("no NEW games while a test is waiting").
+     Any other game is open if the hero has played it before, or if
+     no test is waiting (Citadel.newGamesAllowed).
+     Each game can keep its own small saved data (for example its mini
+     rank) in hero.games[gameId] with getGameData / setGameData.
+     Visitors get the same calls, kept in memory only. */
+  var STARTER_GAMES = ["pizza-party"];
+
+  function canPlayGame(heroId, gameId) {
+    if (STARTER_GAMES.indexOf(gameId) >= 0) return true;
+    var hero = getHero(heroId);
+    if (!hero) return false;
+    return !!hero.games[gameId] || newGamesAllowed(hero);
+  }
+
+  function getGameData(heroId, gameId) {
+    var hero = getHero(heroId);
+    return hero && hero.games[gameId] ? clone(hero.games[gameId]) : {};
+  }
+
+  function setGameData(heroId, gameId, obj) {
+    var w = heroForWrite(heroId);
+    if (!w) return false;
+    w.hero.games[gameId] = clone(obj || {});
+    if (w.data) save(w.data);
+    return true;
   }
 
   /* ---------------------------------------------------------------
@@ -454,6 +557,7 @@
       step: 0,    // Apprentice Bronze
       test: freshTest(),
       areas: {},
+      games: {},
       history: [],
       gameTotals: {},
       trophies: [{ step: 0, date: today() }], // Apprentice – Bronze from day one
@@ -663,8 +767,10 @@
     catch (e) { return false; }
   }
 
-  function speak(id, text) {
-    if (!getSettings(id).readAloud || !canSpeak() || !text) return false;
+  // force: true means the kid tapped a speaker button, so read it even if
+  // "Read words out loud" is off (they asked for it this one time).
+  function speak(id, text, force) {
+    if ((!force && !getSettings(id).readAloud) || !canSpeak() || !text) return false;
     try {
       window.speechSynthesis.cancel(); // stop anything still talking
       var u = new window.SpeechSynthesisUtterance(String(text));
@@ -886,7 +992,7 @@
     { name: "The Imperial Library", href: null,
       text: "Learn how things work. Stories, puzzles and lessons that start every idea.",
       icon: '<path d="M10 44h40v8H10zM14 36h38v8H14zM10 28h40v8H10z"/><path d="M16 31h20M20 39h24M16 47h22"/>' },
-    { name: "The Proving Grounds", href: null,
+    { name: "The Proving Grounds", href: "proving-grounds.html",
       text: "Test what you know. Challenges that show what works, and why.",
       icon: '<path d="M26 8h12M28 8v16L14 50a4 4 0 0 0 3.5 6h29a4 4 0 0 0 3.5-6L36 24V8"/><path d="M19 42h26"/><circle cx="28" cy="48" r="1.5"/><circle cx="36" cy="46" r="1.5"/>' },
     { name: "The Forge", href: null,
@@ -897,9 +1003,10 @@
       icon: '<circle cx="24" cy="38" r="9"/><path d="M24 23v4M24 49v4M9 38h4M35 38h4M13.4 27.4l2.8 2.8M31.8 45.8l2.8 2.8M13.4 48.6l2.8-2.8M31.8 30.2l2.8-2.8"/><circle cx="45" cy="19" r="6"/><path d="M45 9v3M45 26v3M35 19h3M52 19h3M38 12l2 2M50 24l2 2M38 26l2-2M50 14l2-2"/>' }
   ];
 
-  // Fills a <ul class="halls"> with the four banners.
+  // Fills a <ul class="halls"> with the four banners. With a heroId, open
+  // halls link to "hall.html?id=heroId" so the hall knows who is playing.
   // The icon markup above is fixed text written by us, so innerHTML is safe there.
-  function renderHalls(list) {
+  function renderHalls(list, heroId) {
     list.textContent = "";
     HALLS.forEach(function (hall) {
       var svg = document.createElementNS(SVG_NS, "svg");
@@ -910,7 +1017,8 @@
         el("h3", { text: hall.name }),
         el("p", { text: hall.text }),
         el("span", { class: "status", text: hall.href ? "Enter" : "Gates open soon" }));
-      var cloth = hall.href ? el("a", { class: "cloth", href: hall.href }, inner) : el("div", { class: "cloth" }, inner);
+      var href = hall.href && heroId ? hall.href + "?id=" + encodeURIComponent(heroId) : hall.href;
+      var cloth = href ? el("a", { class: "cloth", href: href }, inner) : el("div", { class: "cloth" }, inner);
       list.appendChild(el("li", { class: "hall" }, cloth));
     });
   }
@@ -929,7 +1037,9 @@
     testInfo: testInfo, getTestCoins: getTestCoins, setTestCoins: setTestCoins,
     testStatus: testStatus, testStatusText: testStatusText, canTakeTest: canTakeTest,
     newGamesAllowed: newGamesAllowed, gradeTest: gradeTest, finishTest: finishTest,
-    reportAreaScore: reportAreaScore,
+    reportAreaScore: reportAreaScore, reportAnswer: reportAnswer, skillGrades: skillGrades,
+    STARTER_GAMES: STARTER_GAMES.slice(), canPlayGame: canPlayGame,
+    getGameData: getGameData, setGameData: setGameData,
     coinHistory: coinHistory, gameTotals: gameTotals, correctCoins: correctCoins,
     trophies: trophies, recordBestScore: recordBestScore, bestScores: bestScores,
     getSettings: getSettings, setSetting: setSetting, canSpeak: canSpeak, speak: speak, playSound: playSound,

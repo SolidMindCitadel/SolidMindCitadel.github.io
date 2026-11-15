@@ -7,7 +7,7 @@
   still looks right even on its own.)
 
   Depends on: Google Fonts Cinzel + Alegreya Sans (linked in each page).
-  Used by:    heroes.html, hero.html, treasury.html, test.html, visitor.html
+  Used by:    every page, including proving-grounds.html and games/*.html
 
   Search these tags to jump to a section:
     [CSS-COLORS]   night and daylight color sets (same as index.html)
@@ -19,6 +19,9 @@
     [CSS-RANK]     bronze / silver / gold rank badge
     [CSS-TEST]     next-test box, test page, Treasury coin table
     [CSS-CHEST]    treasure chest, trophy hall, settings switches
+    [CSS-QUESTIONS] question pictures and step-by-step explanations
+                    (used by games and, later, rank tests)
+    [CSS-HALL]     a hall page's list of games
     [CSS-FORMS]    Treasury forms, crest and color pickers
     [CSS-BANNERS]  the four hall banners
     [CSS-NOTICE]   warning and "saved on this device" notes
@@ -247,6 +250,61 @@ a.hero-card:hover, a.hero-card:focus-visible { transform: translateY(-4px); bord
   color: var(--text); background: var(--sky); border: 2px solid var(--gold-soft); border-radius: 10px; padding: .6rem; }
 .warning-box { margin: 1rem 0 0; padding: .8rem 1rem; border-radius: 12px; border: 2px solid var(--danger); background: var(--sky); }
 .visitor-crest { font-size: 3.5rem; line-height: 1; }
+
+/* [CSS-QUESTIONS] Pictures drawn by citadel-questions.js */
+.q-visual { margin: 0; display: flex; justify-content: center; }
+.q-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem; }
+.q-piece { position: relative; display: inline-grid; place-items: center; font-size: 1.9rem; line-height: 1; min-width: 2.2rem; }
+.q-row.big .q-piece { font-size: clamp(2rem, 9vw, 2.8rem); min-width: 2.6rem; }
+.q-piece.small { font-size: 1.4rem; min-width: 1.6rem; }
+.q-piece.gone { opacity: .25; filter: grayscale(1); }
+.q-piece.gone::after { content: "\2715"; position: absolute; color: var(--danger); font-size: 1.4em; font-weight: 700; }
+.q-person { font-size: 2rem; line-height: 1; }
+.q-people { margin-top: .6rem; padding-top: .6rem; border-top: 2px dashed var(--gold-soft); }
+.q-stack, .q-addtake { display: flex; flex-direction: column; align-items: center; gap: .3rem; }
+.q-addtake > .q-row, .q-explain > .q-row.big + .q-op + .q-row.big, .q-explain > .q-row.big:has(+ .q-op) {
+  border: 2px dashed var(--gold-soft); border-radius: 14px; padding: .35rem .5rem; max-width: 100%;
+}
+.q-op { font: 800 2rem/1 "Cinzel", Georgia, serif; color: var(--gold); padding: 0 .3rem; }
+.q-pair { display: flex; flex-wrap: wrap; justify-content: center; gap: 1rem; }
+.q-col { display: flex; flex-direction: column; align-items: center; gap: .3rem; padding: .4rem; border-radius: 14px; }
+.q-col.bigger { box-shadow: 0 0 0 4px var(--arcane); }
+.q-tag { font-weight: 700; }
+.q-circle { max-width: 100%; height: auto; }
+/* explanations: numbers and items appear one by one (class "step" -> "shown") */
+.q-explain { display: flex; flex-direction: column; align-items: center; gap: .6rem; }
+.q-num {
+  position: absolute; top: -.55rem; right: -.35rem; min-width: 1.35rem; height: 1.35rem; padding: 0 .2rem;
+  border-radius: 99px; background: var(--arcane); color: #0F1B30; font: 700 .85rem/1.35rem "Alegreya Sans", sans-serif; text-align: center;
+}
+.step { opacity: 0; transform: scale(.6); transition: opacity .25s ease, transform .25s ease; }
+.step.shown { opacity: 1; transform: none; }
+.fade-out.step { opacity: 1; transform: none; }
+.fade-out.step.shown { opacity: .2; filter: grayscale(1); }
+.q-match { display: flex; flex-wrap: wrap; justify-content: center; gap: .4rem; }
+.q-pairup { display: flex; flex-direction: column; align-items: center; padding: .3rem .35rem; border-radius: 12px; background: var(--sky); border: 1px solid var(--gold-soft); }
+.q-pairup .none { opacity: .55; font-size: 1.4rem; color: var(--danger); }
+.q-plates { display: flex; flex-wrap: wrap; justify-content: center; gap: .5rem; }
+.q-plate { display: flex; flex-direction: column; align-items: center; gap: .2rem; min-width: 4.2rem; padding: .4rem; border-radius: 50% 50% 14px 14px; background: var(--sky); border: 2px solid var(--gold-soft); }
+.q-pile { display: flex; flex-wrap: wrap; justify-content: center; max-width: 5.5rem; min-height: 1.6rem; }
+.q-note { margin: .2rem 0 0; font-weight: 700; }
+.q-why { margin: .2rem 0 0; font-weight: 700; text-align: center; max-width: 34ch; }
+@media (prefers-reduced-motion: reduce) { .step { transition: none; } }
+
+/* [CSS-HALL] A hall page's list of games */
+.game-list { list-style: none; padding: 0; margin: 1.5rem 0 0; display: grid; gap: 1.25rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); }
+.game-card {
+  display: flex; flex-direction: column; align-items: center; gap: .5rem; height: 100%; text-align: center;
+  padding: 1.5rem 1.25rem; background: var(--stone); border: 2px solid var(--gold-soft); border-radius: 18px; text-decoration: none;
+  box-shadow: 0 18px 30px -18px var(--shadow); transition: transform .2s ease, border-color .2s ease;
+}
+a.game-card:hover, a.game-card:focus-visible { transform: translateY(-4px); border-color: var(--gold); }
+.game-card .game-emoji { font-size: 4rem; line-height: 1; }
+.game-card h2 { margin: 0; font-size: 1.4rem; }
+.game-card p { margin: 0; color: var(--text-dim); }
+.game-card .play { margin-top: auto; }
+.game-card.locked { opacity: .7; }
+@media (prefers-reduced-motion: reduce) { .game-card { transition: none; } a.game-card:hover { transform: none; } }
 
 /* Treasury "Correct coins" box inside a hero row */
 .roster details.correct { grid-column: 1 / -1; }

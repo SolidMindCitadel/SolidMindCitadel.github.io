@@ -7,6 +7,51 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.4.0 – Pizza Party – Nov 15, 2026
+
+**What was added**
+- **Pizza Party** (`games/pizza-party.html`), the first game and the template for the others.
+  A round is 5 quick questions with big pizza pictures and big buttons.
+  - Level 1: counting slices, more or fewer, adding and taking away.
+  - Level 2: sharing equally, halves and quarters.
+  - Level 3: sharing with leftovers, fractions of a pizza, comparing fractions.
+  - The level comes from the Treasury.
+  - Wrong answers show why, step by step (slices counted or handed out one by one), with no
+    harsh sounds. Then the kid fixes the question.
+  - A celebration with stars and confetti ends each round.
+  - A 🔊 button reads any question out loud.
+- **Scoring:**
+  - 100 points for right on the first try. After a miss on a skill, a new question on that
+    skill comes later in the round, worth 90, then 80 ... for that session.
+  - Coins = points ÷ 100, rounded (5 for a perfect round, so about 4 rounds reach the first test).
+  - Every answer counts toward its skill's grade (last 10 answers). Mastery = 9 of the last 10
+    right on the first try.
+- **Pizza ranks** just for fun: Dough Roller, Sauce Spreader, Cheese Sprinkler, Topping Tosser,
+  Pizza Master.
+- **Trophy hall** gets a best score for each Pizza Party level. The **treasure chest** shows
+  Pizza Party coins.
+- **The Proving Grounds is open** (`proving-grounds.html`). Its banner is now a link on the main
+  page, hero pages and the visitor page. The other three halls stay closed.
+- **Test question bank** (`citadel-questions.js` + `games/pizza-party-questions.js`): question
+  makers for each skill and level. Rank tests will ask the same kind of question with cookies,
+  apples, pie or cake instead of pizza, so they never repeat a game question. Tests stay
+  "coming soon" for now.
+- **Starter game:** Pizza Party is always open, even while a rank test is waiting.
+- **Visitors** can play (they pick a level), but nothing is saved.
+- **Treasury** shows each hero's skill grades.
+
+**Files changed**
+- New: `games/pizza-party.html`, `games/pizza-party-questions.js`, `citadel-questions.js`,
+  `proving-grounds.html`
+- Changed: `citadel-core.js`, `citadel-core.css`, `index.html`, `hero.html`, `visitor.html`,
+  `treasury.html`, `heroes.html` and `test.html` (version), `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+The kids can now earn coins, build skills and work toward their first rank test, and every
+later game can copy Pizza Party's pattern.
+
+---
+
 ## v0.3.0 – Treasure chest, trophies, settings, backup and visitor mode – Nov 15, 2026
 
 **What was added**

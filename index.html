@@ -298,6 +298,7 @@ footer strong {
   <p class="halls-sub">Every idea starts in the Library, gets tested in the Proving Grounds, and is built in the Forge.</p>
 
   <!-- [HTML-HALLS]
+       The Proving Grounds is open (v0.4.0); the other three are still closed.
        Each hall is a <div class="cloth"> while it's closed.
        To open a hall later: change <div class="cloth"> to <a class="cloth" href="library.html">
        (and its closing </div> to </a>), then change the status line. -->
@@ -316,7 +317,7 @@ footer strong {
     </li>
 
     <li class="hall">
-      <div class="cloth"><div class="cloth-inner">
+      <a class="cloth" href="proving-grounds.html"><div class="cloth-inner">
         <svg viewBox="0 0 64 64" aria-hidden="true">
           <path d="M26 8h12M28 8v16L14 50a4 4 0 0 0 3.5 6h29a4 4 0 0 0 3.5-6L36 24V8"/>
           <path d="M19 42h26"/>
@@ -324,8 +325,8 @@ footer strong {
         </svg>
         <h3>The Proving Grounds</h3>
         <p>Test what you know. Challenges that show what works, and why.</p>
-        <span class="status">Gates open soon</span>
-      </div></div>
+        <span class="status">Enter</span>
+      </div></a>
     </li>
 
     <li class="hall">
@@ -362,7 +363,7 @@ footer strong {
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.3.0</span>
+    <span class="version">v0.4.0</span>
   </div>
 </footer>
 

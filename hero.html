@@ -74,7 +74,7 @@
 
     <!-- [HTML-HALLS] -->
     <h2 class="halls-title">Choose a hall</h2>
-    <p class="halls-sub">The gates open soon. Games will appear here, and every win earns gold coins.</p>
+    <p class="halls-sub">The Proving Grounds is open! Every game you finish earns gold coins. More halls open soon.</p>
     <ul class="halls" id="halls"></ul>
 
     <!-- [HTML-CHEST] -->
@@ -125,7 +125,7 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.3.0</span>
+    <span class="version">v0.4.0</span>
   </div>
 </footer>
 
@@ -172,11 +172,11 @@
     document.getElementById("test-go").hidden = false;
   }
 
-  C.renderHalls(document.getElementById("halls"));
+  C.renderHalls(document.getElementById("halls"), hero.id);
   // Rule 6: while a test is waiting, no NEW games open. Say so kindly.
   if (!C.newGamesAllowed(hero)) {
     document.querySelector(".halls-sub").textContent =
-      "New games stay closed until your test is done. Games you already have can still be played.";
+      "New games stay closed until your test is done. Games you already have (like Pizza Party) can still be played.";
   }
 
   var el = C.el;

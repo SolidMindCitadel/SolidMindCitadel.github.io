@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - The Proving Grounds hall (proving-grounds.html?id=...)
+  ------------------------------------------------------------
+  Purpose: lists the games in this hall (math challenges and quizzes).
+  The "id" in the address says who is playing (a hero, or "visitor").
+  Without an id, it asks the player to choose a hero first.
+  To add a game: add one line to GAMES below and put the game in games/.
+  A game that isn't a starter game is shown locked while that hero has
+  a rank test waiting (rule 6, Citadel.canPlayGame).
+
+  Depends on: citadel-core.js, citadel-core.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      links back
+    [HTML-GAMES]    the list of games (filled in by the script)
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-GAMES]      the games in this hall
+    [JS-LIST]       draws the game cards
+
+  Privacy: nicknames only; everything is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The Proving Grounds · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="citadel-core.css">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html" id="back-link">&larr; Back</a>
+    <a href="index.html">The gate</a>
+  </nav>
+
+  <header class="page-title">
+    <h1>The Proving Grounds</h1>
+    <p>Test what you know. Challenges that show what works, and why.</p>
+  </header>
+
+  <!-- [HTML-GAMES] -->
+  <ul class="game-list" id="games" hidden></ul>
+
+  <div class="empty" id="no-player" hidden>
+    <p><strong>Who's playing?</strong></p>
+    <p>Choose your hero first, or play as a visitor.</p>
+    <div class="btn-row"><a class="btn" href="heroes.html">Choose a hero</a><a class="btn ghost" href="visitor.html">Play as a visitor</a></div>
+  </div>
+
+  <p class="device-note" id="note"></p>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.4.0</span>
+  </div>
+</footer>
+
+<script src="citadel-core.js"></script>
+<script>
+(function () {
+  var C = window.Citadel, el = C.el;
+  function $(x) { return document.getElementById(x); }
+
+  // [JS-GAMES] One line per game in this hall.
+  var GAMES = [
+    { id: "pizza-party", name: "Pizza Party", emoji: "🍕", href: "games/pizza-party.html",
+      text: "Count, share and slice pizzas. Halves, quarters and fractions at higher levels." }
+  ];
+
+  // [JS-LIST]
+  var id = new URLSearchParams(location.search).get("id");
+  var hero = id ? C.getHero(id) : null;
+  C.showStorageNotice($("main"));
+  if (!hero) { $("no-player").hidden = false; return; }
+  var visitor = C.isVisitor(id);
+  $("back-link").href = visitor ? "visitor.html" : "hero.html?id=" + encodeURIComponent(id);
+  $("back-link").textContent = visitor ? "← Visitor page" : "← " + hero.nickname + "'s hall";
+  $("note").textContent = visitor
+    ? "Playing as a visitor: nothing is saved, and coins are only for fun."
+    : "Playing as " + hero.nickname + ". Coins and skills are saved on this device only.";
+
+  GAMES.forEach(function (g) {
+    var open = C.canPlayGame(id, g.id);
+    var starter = C.STARTER_GAMES.indexOf(g.id) >= 0;
+    var inner = [
+      el("span", { class: "game-emoji", "aria-hidden": "true", text: g.emoji }),
+      el("h2", { text: g.name }),
+      el("p", { text: g.text }),
+      starter ? el("span", { class: "hint", text: "Starter game: always open" }) : null,
+      el("span", { class: "btn play", text: open ? "Play" : "Opens after your test" })
+    ];
+    var card = open
+      ? el("a", { class: "game-card", href: g.href + "?id=" + encodeURIComponent(id) })
+      : el("div", { class: "game-card locked" });
+    inner.forEach(function (n) { if (n) card.appendChild(n); });
+    $("games").appendChild(el("li", null, card));
+  });
+  $("games").hidden = false;
+})();
+</script>
+</body>
+</html>
