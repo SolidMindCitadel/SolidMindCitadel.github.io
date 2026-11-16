@@ -43,7 +43,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.6.0";
+  var VERSION = "0.7.0";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]
@@ -554,13 +554,16 @@
   // v0.6.0 learning plan: a game whose subject is Off is closed. Games in an
   // Optional subject, and Nexus games, are never blocked by rule 6, because
   // only Required subjects take part in rank tests.
-  function canPlayGame(heroId, gameId) {
+  // v0.7.0: chapters (citadel-adventure.js) pass their own subject and
+  // "starter" flag from their data file in opts: { subject, starter },
+  // so a new chapter needs no new code here.
+  function canPlayGame(heroId, gameId, opts) {
     var hero = getHero(heroId);
     if (!hero) return false;
-    var subj = gameSubject(gameId);
+    var subj = opts && opts.subject ? opts.subject : gameSubject(gameId);
     var choice = subj ? subjectChoice(hero, subj) : null;
     if (choice === "off") return false;
-    if (STARTER_GAMES.indexOf(gameId) >= 0) return true;
+    if (STARTER_GAMES.indexOf(gameId) >= 0 || (opts && opts.starter === true)) return true;
     if (choice === "optional") return true;
     return !!hero.games[gameId] || newGamesAllowed(hero);
   }
@@ -1093,7 +1096,7 @@
      Off in the hero's learning plan (v0.6.0), so Off subjects stay hidden.
      --------------------------------------------------------------- */
   var HALLS = [
-    { name: "The Imperial Library", href: null,
+    { name: "The Imperial Library", href: "library.html", subjects: ["math", "reading", "science", "art"],
       text: "Learn how things work. Stories, puzzles and lessons that start every idea.",
       icon: '<path d="M10 44h40v8H10zM14 36h38v8H14zM10 28h40v8H10z"/><path d="M16 31h20M20 39h24M16 47h22"/>' },
     { name: "The Proving Grounds", href: "proving-grounds.html", subjects: ["math"],
@@ -1153,7 +1156,7 @@
      hero, they go to heroes.html?next=<hall>. After they tap a hero, they
      land back in that hall's games instead of the hero page. Only the halls
      listed here are allowed, so the address can't send anyone elsewhere. */
-  var NEXT_PAGES = { "proving-grounds": "proving-grounds.html", "nexus": "nexus.html" };
+  var NEXT_PAGES = { "library": "library.html", "proving-grounds": "proving-grounds.html", "nexus": "nexus.html" };
   function nextPage(name, heroId) {
     var page = NEXT_PAGES[name];
     return page ? page + "?id=" + encodeURIComponent(heroId) : null;

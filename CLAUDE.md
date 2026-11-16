@@ -312,6 +312,47 @@ Ladder Race is the model.
   "Nexus" for heroes with Nexus access).
 - "Nexus rewards" is stored but nothing uses it yet; it is for future Nexus adventures.
 
+## Chapters and adventures (built in v0.7.0)
+
+- **One engine for every chapter:** `citadel-adventure.js` + `citadel-adventure.css`. It plays
+  any chapter, core or Nexus, from the chapter's **data file**
+  (`adventures/<adventure>/<chapter>.js`, which calls `CitadelAdventure.chapter({...})`).
+  New chapters need only new data. `adventures/play.html?adv=...&ch=...&id=...` is the one page
+  that plays them all. How to write one: `CHAPTER-TEMPLATE.md`.
+- **Five steps, in order** (the next unlocks when the current one is done; after that any step can
+  be replayed; no timer anywhere):
+  1. Story (scenes with a picture area, read aloud)
+  2. Lesson (short points with simple pictures)
+  3. Challenge ("What should I do now?"; every answer shows why; wrong answers can be retried;
+     no coins)
+  4. Practice game (race against the computer on `citadel-race.js`; done when a race ends, win or
+     lose)
+  5. Mastery check (Ariet's rules): always 10 questions, right on the FIRST try only;
+     **90% = 9 of 10** finishes the chapter. Level 1 plays two rounds of 5 with a short celebration
+     in between. Below 90%: show which skills to practise; retry anytime with new questions.
+- **Coins** (Ariet's choice): Practice and Mastery give gold coins like Pizza Party (100 points
+  first try, minus 10 per miss on that skill this visit, coins = points ÷ 100 when the race or
+  check ends). Story, Lesson and Challenge give none. Every Practice and Mastery answer goes to
+  `Citadel.reportAnswer` (skill grades and 90% mastery). **Nexus chapters never give gold coins.**
+- **Who may open a chapter** (`CitadelAdventure.access`): core chapters follow the learning plan
+  (Off = hidden) and rule 6 via `Citadel.canPlayGame(heroId, gameId, { subject, starter })`;
+  Nexus chapters need Nexus access (never visitors) and go back to `nexus.html`.
+  `starter: true` (only the sample, Ariet's choice) keeps a chapter open while a test waits.
+- Progress per hero per chapter (steps done, character, best check score) is saved on the device
+  with `Citadel.setGameData` under `adv-<adventure>-<chapter>`. Best check score goes to the
+  Trophy hall.
+- **Character choice** (optional, e.g. boy or girl archaeologist): an avatar only, nothing about
+  the real child. Placeholder pictures (emoji + "Picture coming soon") until Ariet's artwork.
+- Questions: from the question bank (`bank: { areas per level }`, plus the game's file in
+  `questionFiles`) or written in the data file. Items can say `levels: [...]`.
+- **The Imperial Library is open** (`library.html`, one `ADVENTURES` line per chapter).
+  It has one **sample** chapter (`adventures/sample/chapter-1.js`, Math, Pizza Party's skills),
+  whose story, lesson and challenge text are placeholders marked "Sample – real stories coming
+  soon". Real chapters (starting with The Lost Pyramid Chapter 1) come from Ariet and ChatGPT
+  via `CHAPTER-TEMPLATE.md`; Claude Code doesn't write real stories.
+- Nexus adventures (The Lost Pyramid in the Nexus) will use this same engine with
+  `track: "nexus"`; not built yet.
+
 ## Planned (not built yet): hidden quests and special events
 
 - A hidden quest appears when a hero reaches each new rank: Squire, Knight,
@@ -335,6 +376,9 @@ Ladder Race is the model.
   the games' questions.
 
 ## Planned (not built yet): story lessons (Imperial Library)
+
+(The chapter engine for these was built in v0.7.0, see "Chapters and adventures" above. The rules
+below still apply to the real stories.)
 
 - Each game gets an original interactive story that teaches its concept first. Example: a
   kid-friendly mystery where a detective follows math clues to catch the culprit.
@@ -424,16 +468,22 @@ Ladder Race is the model.
 - [ ] Coins: just for fun, or tied to real rewards approved in the Treasury?
 - [x] Treasury PIN: Ariet sets it on first use (built in v0.2.0)
 - [ ] When to move the kids' games to their own repository (before sharing outside the family)
-- [ ] Theme of the first story lesson (Ariet picks later)
+- [x] Theme of the first story lesson: The Lost Pyramid, Chapter 1 (to be written by Ariet and ChatGPT)
 
 ## Current files
 
 | File | What it is |
 | --- | --- |
-| `index.html` | Main page (castle, four halls: Proving Grounds open, Nexus closed here, "Enter the Citadel" button) |
+| `index.html` | Main page (castle, four halls: Imperial Library and Proving Grounds open, Nexus closed here, "Enter the Citadel" button) |
 | `heroes.html` | "Who enters the Citadel?" hero cards (`?next=<hall>` returns to that hall after choosing) |
 | `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, my subjects, halls, treasure chest, trophy hall, settings |
 | `visitor.html` | Visitor page for friends: halls, games, nothing saved |
+| `library.html` | The Imperial Library hall: list of its adventure chapters (`?id=hero or visitor`) |
+| `adventures/play.html` | Plays any chapter (`?adv=...&ch=...&id=...`) with the chapter engine |
+| `adventures/sample/chapter-1.js` | The sample chapter's data (placeholder text, Pizza Party skills) |
+| `citadel-adventure.js` | The chapter engine: five steps, character choice, progress, coins |
+| `citadel-adventure.css` | The chapter engine's look |
+| `CHAPTER-TEMPLATE.md` | What Ariet and ChatGPT write for a chapter, with an example |
 | `proving-grounds.html` | The Proving Grounds hall: list of its games (`?id=hero or visitor`) |
 | `nexus.html` | The Nexus hall (`?id=hero`), only for heroes with Nexus access |
 | `nexus/ladder-race.html` | Ladder Race: standalone game from Ariet's PLC course (exception, see Nexus) |
@@ -478,3 +528,7 @@ Ladder Race is the model.
   (Math, Reading, Science, Art, PLC); Treasury "Learning plan" (Required / Optional / Off per
   subject, plus a "Nexus rewards" switch); only Required subjects count toward rank tests and
   rule 6; "My subjects" on the hero page. Existing heroes: Math Required, others Optional.
+- Nov 16, 2026: **v0.7.0 Chapter framework and sample adventure.** Chapter engine
+  (`citadel-adventure.js`/`.css`, five steps, character choice, saved progress), one page that plays
+  any chapter (`adventures/play.html`), Imperial Library opened (`library.html`) with a sample Math
+  chapter (`adventures/sample/chapter-1.js`, placeholder text), and `CHAPTER-TEMPLATE.md`.

@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - The Imperial Library hall (library.html?id=...)
+  ------------------------------------------------------------
+  Purpose: lists the adventures in the Library. Each adventure has chapters
+  played by the chapter engine (citadel-adventure.js) in
+  adventures/play.html. The "id" in the address says who is playing (a hero,
+  or "visitor"). Without an id, it asks the player to choose a hero first;
+  heroes.html?next=library brings them straight back here.
+  To add a chapter: put its data file in adventures/<adventure>/ (see
+  CHAPTER-TEMPLATE.md) and add one line to ADVENTURES below. The title,
+  subject and picture come from the chapter's own data file.
+  Chapters whose subject is Off in the hero's learning plan are left out;
+  a chapter that isn't a starter is shown locked while a rank test waits
+  (rule 6). Nexus chapters are not listed here (they belong in the Nexus).
+
+  Depends on: subjects.js, citadel-core.js, citadel-core.css,
+              citadel-adventure.js, citadel-adventure.css
+
+  Search these tags to jump to a section:
+    [HTML-TOP]         links back
+    [HTML-ADVENTURES]  the list of chapters (filled in by the script)
+    [HTML-FOOTER]      bottom of the page and version number
+    [JS-UPDATE]        reloads the page once when a newer version is out
+    [JS-ADVENTURES]    the chapters in this hall
+    [JS-LIST]          loads each chapter's data and draws its card
+
+  Privacy: nicknames only; everything is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- [JS-UPDATE] [VERSION] Pages update themselves. When this page opens, it asks
+     version.json (skipping the browser's saved copy) for the newest version. If that is newer
+     than PAGE_VERSION below, the page reloads ONCE with "_fresh=<version>" in the address, so
+     the browser fetches the newest copy. It never loops: it won't reload if the address
+     already has that "_fresh" mark, or if this tab already tried for that version. If
+     version.json can't be loaded, nothing happens and the page works as usual. -->
+<script>
+(function () {
+  var PAGE_VERSION = "0.7.0"; // [VERSION] change with every version, same as the footer
+  var VERSION_FILE = "version.json";
+  function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
+    var x = String(a).split("."), y = String(b).split(".");
+    for (var i = 0; i < 3; i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d > 0; }
+    return false;
+  }
+  try {
+    if (!window.fetch || !window.URL) return;
+    fetch(VERSION_FILE + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.version || !newer(j.version, PAGE_VERSION)) return;
+        var url = new URL(location.href);
+        if (url.searchParams.get("_fresh") === j.version) return; // already reloaded for it
+        var key = "smc-fresh:" + location.pathname;
+        try { if (sessionStorage.getItem(key) === j.version) return; sessionStorage.setItem(key, j.version); } catch (e) { /* storage blocked: the address mark still stops loops */ }
+        url.searchParams.set("_fresh", j.version);
+        location.replace(url.toString());
+      })
+      .catch(function () { /* offline or missing: keep the page as it is */ });
+  } catch (e) { /* very old browser: keep the page as it is */ }
+})();
+</script>
+<title>The Imperial Library · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
+<link rel="stylesheet" href="citadel-core.css?v=0.7.0">
+<link rel="stylesheet" href="citadel-adventure.css?v=0.7.0">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="heroes.html" id="back-link">&larr; Back</a>
+    <a href="index.html">The gate</a>
+  </nav>
+
+  <header class="page-title">
+    <h1>The Imperial Library</h1>
+    <p>Learn how things work. Stories, lessons and adventures that start every idea.</p>
+  </header>
+
+  <!-- [HTML-ADVENTURES] -->
+  <ul class="game-list" id="adventures" hidden></ul>
+  <p class="empty" id="none" hidden>No adventures here right now.</p>
+  <p class="empty" id="load-error" hidden>The adventures couldn't load. Check the internet connection and reload the page.</p>
+
+  <div class="empty" id="no-player" hidden>
+    <p><strong>Who's reading?</strong></p>
+    <p>Choose your hero first, or play as a visitor.</p>
+    <div class="btn-row"><a class="btn" href="heroes.html?next=library">Choose a hero</a><a class="btn ghost" href="library.html?id=visitor">Play as a visitor</a></div>
+  </div>
+
+  <p class="device-note" id="note"></p>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.7.0</span>
+  </div>
+</footer>
+
+<script src="subjects.js?v=0.7.0"></script>
+<script src="citadel-core.js?v=0.7.0"></script>
+<script src="citadel-adventure.js?v=0.7.0"></script>
+<script>
+(function () {
+  var C = window.Citadel, A = window.CitadelAdventure, el = C.el;
+  function $(x) { return document.getElementById(x); }
+
+  // [JS-ADVENTURES] One line per chapter: its adventure folder and chapter file name
+  // (adventures/sample/chapter-1.js). Everything else comes from the data file.
+  var ADVENTURES = [
+    { adventure: "sample", chapter: "chapter-1" }
+  ];
+
+  // [JS-LIST]
+  var id = new URLSearchParams(location.search).get("id");
+  var hero = id ? C.getHero(id) : null;
+  C.showStorageNotice($("main"));
+  if (!hero) { $("no-player").hidden = false; return; }
+  var visitor = C.isVisitor(id);
+  $("back-link").href = visitor ? "visitor.html" : "hero.html?id=" + encodeURIComponent(id);
+  $("back-link").textContent = visitor ? "← Visitor page" : "← " + hero.nickname + "'s hall";
+  $("note").textContent = visitor
+    ? "Playing as a visitor: nothing is saved, and coins are only for fun."
+    : "Playing as " + hero.nickname + ". Progress, coins and skills are saved on this device only.";
+
+  Promise.all(ADVENTURES.map(function (a) {
+    return A.load("adventures/", "", a.adventure, a.chapter, true).catch(function () { return null; });
+  })).then(function (chapters) {
+    var shown = 0, failed = 0;
+    chapters.forEach(function (chap, i) {
+      if (!chap) { failed++; return; }
+      if (chap.track === "nexus") return;          // Nexus chapters live in the Nexus
+      var acc = A.access(id, chap);
+      if (!acc.ok && acc.why !== "test") return;   // subject Off: hidden
+      shown++;
+      var prog = A.progress(id, chap), done = A.stepsDone(prog), total = A.STEPS.length;
+      var subj = window.CitadelSubjects.get(chap.subject);
+      var inner = [
+        el("span", { class: "game-emoji", "aria-hidden": "true", text: chap.emoji || "📖" }),
+        el("h2", { text: chap.title }),
+        el("p", { text: (subj ? subj.emoji + " " + subj.name + " · " : "") + (chap.blurb || "") }),
+        chap.sample ? el("p", { class: "adv-sample", text: "Sample – real stories coming soon" }) : null,
+        el("div", { class: "adv-progress" },
+          el("span", { text: A.finished(prog) ? "Finished ⭐" : done + " of " + total + " steps" }),
+          el("span", { class: "bar", role: "progressbar", "aria-valuemin": 0, "aria-valuemax": total, "aria-valuenow": done, "aria-label": "Steps done" },
+            el("span", { style: "width:" + Math.round(100 * done / total) + "%" }))),
+        el("span", { class: "btn play", text: !acc.ok ? "Opens after your test" : done ? "Continue" : "Start" })
+      ];
+      var href = "adventures/play.html?adv=" + encodeURIComponent(ADVENTURES[i].adventure) +
+        "&ch=" + encodeURIComponent(ADVENTURES[i].chapter) + "&id=" + encodeURIComponent(id);
+      var card = acc.ok ? el("a", { class: "game-card", href: href }) : el("div", { class: "game-card locked" });
+      inner.forEach(function (n) { if (n) card.appendChild(n); });
+      $("adventures").appendChild(el("li", null, card));
+    });
+    $("adventures").hidden = !shown;
+    $("none").hidden = shown > 0 || failed > 0;
+    $("load-error").hidden = !(failed && !shown);
+  });
+})();
+</script>
+</body>
+</html>

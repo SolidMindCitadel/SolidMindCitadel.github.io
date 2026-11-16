@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<!--
+  SolidMind Citadel - play a chapter (adventures/play.html?adv=...&ch=...&id=...)
+  ------------------------------------------------------------
+  Purpose: the ONE page that plays every chapter, core or Nexus. It loads the
+  chapter's data file (adventures/<adv>/<ch>.js) and hands it to the chapter
+  engine (citadel-adventure.js). New chapters need no change here.
+    adv = adventure folder, ch = chapter file name (a-z, 0-9 and "-" only),
+    id  = hero id, or "visitor" (core chapters only).
+  Core chapters go back to the Imperial Library; Nexus chapters go back to
+  the Nexus and need "Nexus access".
+
+  Depends on: ../subjects.js, ../citadel-core.js, ../citadel-core.css,
+              ../citadel-questions.js, ../citadel-race.js,
+              ../citadel-adventure.js, ../citadel-adventure.css,
+              and the chapter's data file (plus any question files it lists)
+
+  Search these tags to jump to a section:
+    [HTML-TOP]      link back to the hall
+    [HTML-CHAPTER]  where the engine draws the chapter
+    [HTML-MESSAGES] no hero / closed / missing chapter
+    [HTML-FOOTER]   bottom of the page and version number
+    [JS-UPDATE]     reloads the page once when a newer version is out
+    [JS-START]      reads the address, loads the chapter, checks access, starts
+
+  Privacy: nicknames only; progress is saved on this device only.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- [JS-UPDATE] [VERSION] Pages update themselves. When this page opens, it asks
+     version.json (skipping the browser's saved copy) for the newest version. If that is newer
+     than PAGE_VERSION below, the page reloads ONCE with "_fresh=<version>" in the address, so
+     the browser fetches the newest copy. It never loops: it won't reload if the address
+     already has that "_fresh" mark, or if this tab already tried for that version. If
+     version.json can't be loaded, nothing happens and the page works as usual. -->
+<script>
+(function () {
+  var PAGE_VERSION = "0.7.0"; // [VERSION] change with every version, same as the footer
+  var VERSION_FILE = "../version.json";
+  function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
+    var x = String(a).split("."), y = String(b).split(".");
+    for (var i = 0; i < 3; i++) { var d = (parseInt(x[i], 10) || 0) - (parseInt(y[i], 10) || 0); if (d) return d > 0; }
+    return false;
+  }
+  try {
+    if (!window.fetch || !window.URL) return;
+    fetch(VERSION_FILE + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        if (!j || !j.version || !newer(j.version, PAGE_VERSION)) return;
+        var url = new URL(location.href);
+        if (url.searchParams.get("_fresh") === j.version) return; // already reloaded for it
+        var key = "smc-fresh:" + location.pathname;
+        try { if (sessionStorage.getItem(key) === j.version) return; sessionStorage.setItem(key, j.version); } catch (e) { /* storage blocked: the address mark still stops loops */ }
+        url.searchParams.set("_fresh", j.version);
+        location.replace(url.toString());
+      })
+      .catch(function () { /* offline or missing: keep the page as it is */ });
+  } catch (e) { /* very old browser: keep the page as it is */ }
+})();
+</script>
+<title>Adventure · SolidMind Citadel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏰</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
+<link rel="stylesheet" href="../citadel-core.css?v=0.7.0">
+<link rel="stylesheet" href="../citadel-adventure.css?v=0.7.0">
+</head>
+<body>
+
+<main class="wrap" id="main">
+  <!-- [HTML-TOP] -->
+  <nav class="top-links" aria-label="Citadel">
+    <a href="../library.html" id="back-link">&larr; The Imperial Library</a>
+    <a href="../index.html">The gate</a>
+  </nav>
+
+  <!-- [HTML-CHAPTER] -->
+  <div id="chapter"><p class="device-note" id="loading">Opening the chapter…</p></div>
+
+  <!-- [HTML-MESSAGES] -->
+  <div class="empty" id="no-player" hidden>
+    <p><strong>Who's playing?</strong></p>
+    <p>Choose your hero first, or play as a visitor.</p>
+    <div class="btn-row"><a class="btn" href="../heroes.html?next=library">Choose a hero</a><a class="btn ghost" id="visitor-link" href="../library.html?id=visitor">Play as a visitor</a></div>
+  </div>
+  <div class="empty" id="closed" hidden>
+    <p><strong id="closed-title">This chapter is closed.</strong></p>
+    <p id="closed-text"></p>
+    <a class="btn" id="closed-link" href="../library.html">Back</a>
+  </div>
+  <div class="empty" id="missing" hidden>
+    <p><strong>This chapter couldn't be opened.</strong></p>
+    <p>Check the internet connection and reload, or go back and pick another one.</p>
+    <a class="btn" href="../library.html" id="missing-link">Back to the Library</a>
+  </div>
+  <p class="device-note" id="note"></p>
+</main>
+
+<!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
+<footer>
+  <div class="wrap">
+    <strong>SolidMind Citadel</strong>
+    Envision a Brighter Tomorrow.
+    <span class="version">v0.7.0</span>
+  </div>
+</footer>
+
+<script src="../subjects.js?v=0.7.0"></script>
+<script src="../citadel-core.js?v=0.7.0"></script>
+<script src="../citadel-questions.js?v=0.7.0"></script>
+<script src="../citadel-race.js?v=0.7.0"></script>
+<script src="../citadel-adventure.js?v=0.7.0"></script>
+<script>
+(function () {
+  "use strict";
+  var C = window.Citadel, A = window.CitadelAdventure, el = C.el;
+  function $(x) { return document.getElementById(x); }
+
+  /* [JS-START] */
+  var params = new URLSearchParams(location.search);
+  var adv = params.get("adv") || "", ch = params.get("ch") || "", id = params.get("id");
+  C.showStorageNotice($("main"));
+  var hero = id ? C.getHero(id) : null;
+  var visitor = C.isVisitor(id);
+
+  A.load("", "../", adv, ch).then(function (chap) {
+    var nexus = chap.track === "nexus";
+    var hall = nexus ? "../nexus.html" : "../library.html";
+    var hallName = nexus ? "The Nexus" : "The Imperial Library";
+    var back = hero ? hall + "?id=" + encodeURIComponent(id) : hall;
+    $("back-link").href = back; $("back-link").textContent = "\u2190 " + hallName;
+    $("closed-link").href = back; $("missing-link").href = back;
+    $("loading").remove();
+    document.title = chap.title + " · SolidMind Citadel";
+    if (!hero) {
+      if (nexus) { $("visitor-link").remove(); }
+      $("no-player").hidden = false;
+      return;
+    }
+    var acc = A.access(id, chap);
+    if (!acc.ok) {
+      $("closed-text").textContent = {
+        nexus: "Only heroes with Nexus access can play this chapter. A parent can open the Nexus in the Treasury.",
+        off: "This subject is turned off for this hero. A parent can change the learning plan in the Treasury.",
+        test: "New chapters open after your rank test. Games and chapters you already have can still be played."
+      }[acc.why] || "";
+      $("closed").hidden = false;
+      return;
+    }
+    // Level: the hero's level from the Treasury. Visitors pick one first.
+    function start(level) {
+      A.run({ mount: $("chapter"), heroId: id, chapter: chap, level: level });
+      $("note").textContent = visitor ? "Playing as a visitor: nothing is saved, and coins are only for fun."
+        : "Your progress is saved on this device only.";
+    }
+    var levels = chap.levels || [1, 2, 3];
+    if (visitor) {
+      var box = el("div", { class: "panel", style: "text-align:center" },
+        el("h1", { text: chap.title }),
+        el("p", { text: "Pick a level:" }));
+      var row = el("div", { class: "btn-row", style: "justify-content:center" });
+      levels.forEach(function (n) {
+        row.appendChild(el("button", { class: "btn ghost", type: "button", text: "Level " + n, onclick: function () { start(n); } }));
+      });
+      box.appendChild(row);
+      $("chapter").appendChild(box);
+    } else if (levels.indexOf(hero.level) < 0) {
+      $("closed-title").textContent = "This chapter is for Level " + levels.join(" and ") + ".";
+      $("closed-text").textContent = hero.nickname + " is Level " + hero.level + ". A parent sets levels in the Treasury.";
+      $("closed").hidden = false;
+    } else {
+      start(hero.level);
+    }
+  }).catch(function () {
+    if ($("loading")) $("loading").remove();
+    $("missing").hidden = false;
+  });
+})();
+</script>
+</body>
+</html>
