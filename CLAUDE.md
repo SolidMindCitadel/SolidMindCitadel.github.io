@@ -19,6 +19,47 @@ Right now it's for family only. Later it may also host the SolidMind PLC trainer
 students, and the kids' games may move to their own repository (see "Keep it easy
 to separate").
 
+## Goals and how we work
+
+- **How we work:** SolidMind Citadel is a collaboration between Ariet, ChatGPT and Claude.
+  - Ariet is the creator and makes the final decisions.
+  - ChatGPT's main strengths: creative direction, educational content, stories, artwork and
+    game design.
+  - Claude (chat) helps with technical planning, programming decisions, reviewing ideas and
+    finding improvements, and reviews every pull request.
+  - Claude Code implements and tests.
+  - These are strengths, not rigid boundaries: anyone can suggest ideas, point out problems or
+    propose a better approach. Claude Code should say so when it sees a better way, but ask
+    Ariet before doing anything different from what he asked. The approval process stays the
+    same: Ariet merges every change.
+- **Target:** a family learning project with a playable version by **January 2027**. Fun first:
+  the games must make kids curious enough to want to solve the next problem. Don't
+  overcomplicate the system; this is not a school management system.
+- **Every version must produce something Ariet can open and test.** No long architecture work
+  without a playable result.
+- **Never remove or break** existing games, the Treasury, ranks, rewards, Nexus access or
+  existing hero progress.
+- **Two learning tracks, one framework** (built in v0.6.0, see "Learning paths" below):
+  - **Core curriculum** = subjects Ariet assigns. Only **Required** core subjects count toward
+    rank tests and core progression.
+  - **The Nexus** = specialized learning (PLC, Arduino, automation), only for heroes Ariet
+    authorizes, possibly adults later. Nexus progress and mastery never block, and never count
+    toward, core progression.
+- **Nexus rewards:** Nexus activities never give core coins. They may give bonus achievements,
+  cosmetic rewards and gold dust, but only for heroes where Ariet turns on **"Nexus rewards"**
+  in the Treasury (off by default). Gold dust can later become real money (nuggets, bricks),
+  so this switch stays Ariet's decision.
+- **Ladder Race** stays a standalone game, exactly as it is.
+- **The PLC and Arduino trainer prototypes stay separate.** They may be linked from the Nexus
+  later, not integrated.
+- **Artwork:** Ariet supplies original character and background images. Code is used for
+  boards, buttons, ladder diagrams, animations and effects. Never use commercial game art or
+  random internet images. Later, players choose a boy or girl archaeologist (an avatar choice;
+  nothing about the real child is stored).
+- **Story content** (story, dialogue, learning objectives, puzzles) is led by Ariet and ChatGPT.
+  Claude can suggest improvements, but Claude Code doesn't invent or finalize it; Ariet
+  approves the final version.
+
 ## Who uses it
 
 Three kids at different levels, from early elementary to middle school. Every game
@@ -179,6 +220,7 @@ A banner is a `<div class="cloth">` while closed ("Gates open soon") and becomes
   to `heroes.html?next=<hall>`, and the chosen hero lands straight back in that hall's games.
   Each new hall must be added to `NEXT_PAGES` in `citadel-core.js` `[JS-NEXT]`.
 - **Starter games** (`Citadel.STARTER_GAMES`, now just `pizza-party`) are never blocked by rule 6.
+  Since v0.6.0 rule 6 only blocks games in Required subjects, and an Off subject closes its games.
   Other games check `Citadel.canPlayGame(heroId, gameId)`.
 - **Scoring (Ariet's rules):**
   - Right on the first try = 100 points.
@@ -247,6 +289,28 @@ Ladder Race is the model.
     the kid can follow along.
 - No game uses it yet. A game that does still follows the Citadel rules (coins, skill areas,
   mastery, trophies) through `citadel-core.js`, using the `onAnswer` and `onEnd` callbacks.
+
+## Learning paths (built in v0.6.0)
+
+- **`subjects.js`** lists the subjects, each `core` or `nexus`, and which subject each game
+  teaches (`GAME_SUBJECTS`). Core: Math, Reading, Science, Art. Nexus: PLC.
+  Pizza Party = Math. Ladder Race = no subject (standalone). A new game adds one line there.
+  Every page that loads `citadel-core.js` loads `subjects.js` first.
+- **Learning plan** (Treasury, per hero): each core subject is **Required**, **Optional** or
+  **Off**, plus the "Nexus access" and "Nexus rewards" switches (both off by default).
+  - **Required:** counts toward rank tests and rule 6.
+  - **Optional:** can be played and gives gold coins as usual (Ariet's choice), but its skills
+    never appear on rank tests and it is never blocked by rule 6.
+  - **Off:** hidden from the hero (its games, and a hall whose subjects are all Off).
+  - No Required subject = no rank tests for now (test state `none`); nothing is lost.
+- Heroes saved before v0.6.0, and new heroes, start with Math Required and the others Optional.
+- Rank tests must take their skill areas from
+  `CitadelQuestions.areasForSubjects(level, Citadel.requiredSubjects(hero))`.
+- Code: `Citadel.subjectChoice`, `requiredSubjects`, `mySubjects`, `gameSubject`,
+  `gameVisible`, `setPlan`, `hasNexusRewards` (`citadel-core.js` `[JS-PLAN]`).
+- The hero page shows **"My subjects"** with Required or Optional next to each (PLC shows as
+  "Nexus" for heroes with Nexus access).
+- "Nexus rewards" is stored but nothing uses it yet; it is for future Nexus adventures.
 
 ## Planned (not built yet): hidden quests and special events
 
@@ -320,7 +384,7 @@ Ladder Race is the model.
   and new shared files must use `?v=` too. A changed `?v=` makes browsers fetch the new file.
   HTML pages themselves may stay cached for up to about 10 minutes after a merge (GitHub Pages).
 - **Pages update themselves (`version.json`, built in v0.5.1):**
-  - The main folder has `version.json`, holding the current version: `{"version": "0.5.1"}`.
+  - The main folder has `version.json`, holding the current version, e.g. `{"version": "0.6.0"}`.
   - Every page has a small `[JS-UPDATE]` script in its `<head>` with
     `PAGE_VERSION`. When the page opens, it fetches `version.json` without using the browser's
     saved copy. If that version is newer, the page reloads **once** with `_fresh=<version>` in its
@@ -368,7 +432,7 @@ Ladder Race is the model.
 | --- | --- |
 | `index.html` | Main page (castle, four halls: Proving Grounds open, Nexus closed here, "Enter the Citadel" button) |
 | `heroes.html` | "Who enters the Citadel?" hero cards (`?next=<hall>` returns to that hall after choosing) |
-| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, halls, treasure chest, trophy hall, settings |
+| `hero.html` | One hero's home page (`hero.html?id=...`): coins, rank, level, next test, my subjects, halls, treasure chest, trophy hall, settings |
 | `visitor.html` | Visitor page for friends: halls, games, nothing saved |
 | `proving-grounds.html` | The Proving Grounds hall: list of its games (`?id=hero or visitor`) |
 | `nexus.html` | The Nexus hall (`?id=hero`), only for heroes with Nexus access |
@@ -377,9 +441,10 @@ Ladder Race is the model.
 | `games/pizza-party.html` | Pizza Party, the first game and the template for others |
 | `games/pizza-party-questions.js` | Pizza Party's question makers (added to the test bank) |
 | `citadel-questions.js` | Shared test question bank, themes, pictures and step-by-step explanations |
-| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, hero progress, correct coins, test coin amounts, backup and restore |
+| `treasury.html` | Parent area behind the PIN: add/edit/remove heroes, set levels, learning plan, Nexus switches, hero progress, correct coins, test coin amounts, backup and restore |
 | `test.html` | A hero's next test (`test.html?id=...`): placeholder until real questions, parent preview |
-| `citadel-core.js` | Shared code: heroes, coins and history, rank ladder, tests, area scores, trophies, settings, visitor, backup, levels, PIN, halls |
+| `subjects.js` | Subjects (core or Nexus) and which subject each game teaches |
+| `citadel-core.js` | Shared code: heroes, coins and history, rank ladder, tests, area scores, trophies, settings, visitor, backup, levels, learning plan, PIN, halls |
 | `citadel-core.css` | Shared look for the pages above |
 | `CHANGELOG.md` | Every version, newest first |
 | `version.json` | The current version; pages compare against it and reload once when it's newer |
@@ -409,3 +474,7 @@ Ladder Race is the model.
   rules, and planned quest dice rules and story lessons.
 - Nov 15, 2026: **v0.5.1 Pages update themselves.** New `version.json`; every page checks it when
   it opens and reloads once if a newer version is out (no loops; works normally if it can't load).
+- Nov 16, 2026: **v0.6.0 Learning paths.** New "Goals and how we work" section; `subjects.js`
+  (Math, Reading, Science, Art, PLC); Treasury "Learning plan" (Required / Optional / Off per
+  subject, plus a "Nexus rewards" switch); only Required subjects count toward rank tests and
+  rule 6; "My subjects" on the hero page. Existing heroes: Math Required, others Optional.

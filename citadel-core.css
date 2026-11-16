@@ -19,6 +19,7 @@
     [CSS-RANK]     bronze / silver / gold rank badge
     [CSS-TEST]     next-test box, test page, Treasury coin table
     [CSS-CHEST]    treasure chest, trophy hall, settings switches
+    [CSS-SUBJECTS] "My subjects" on a hero's page
     [CSS-QUESTIONS] question pictures and step-by-step explanations
                     (used by games and, later, rank tests)
     [CSS-HALL]     a hall page's list of games
@@ -252,6 +253,15 @@ a.hero-card:hover, a.hero-card:focus-visible { transform: translateY(-4px); bord
 .warning-box { margin: 1rem 0 0; padding: .8rem 1rem; border-radius: 12px; border: 2px solid var(--danger); background: var(--sky); }
 .visitor-crest { font-size: 3.5rem; line-height: 1; }
 
+/* [CSS-SUBJECTS] "My subjects" on a hero's page (v0.6.0) */
+.subjects { list-style: none; padding: 0; margin: 0; display: grid; gap: .5rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); }
+.subject { display: flex; align-items: center; gap: .6rem; min-height: 48px; padding: .4rem .75rem; background: var(--sky); border: 1px solid var(--gold-soft); border-radius: 12px; }
+.subject-emoji { font-size: 1.5rem; line-height: 1; }
+.subject-name { flex: 1; font-weight: 700; }
+.subject-tag { font-size: .85rem; font-weight: 700; padding: .1rem .55rem; border-radius: 99px; border: 1px solid var(--gold-soft); color: var(--text-dim); }
+.subject-required .subject-tag { border-color: var(--gold); color: var(--gold); }
+.subject-nexus .subject-tag { border-color: var(--arcane); color: var(--arcane); }
+
 /* [CSS-QUESTIONS] Pictures drawn by citadel-questions.js */
 .q-visual { margin: 0; display: flex; justify-content: center; }
 .q-row { display: flex; flex-wrap: wrap; justify-content: center; gap: .25rem; }
@@ -374,8 +384,15 @@ a.game-card:hover, a.game-card:focus-visible { transform: translateY(-4px); bord
 
 /* Treasury "Correct coins" box inside a hero row */
 .roster details.correct { grid-column: 1 / -1; }
-.roster .nexus-switch { grid-column: 1 / -1; margin: 0; font-weight: 700; }
-.roster .nexus-switch .hint { font-weight: 400; }
+.roster .switch { margin: 0; font-weight: 700; }
+.roster .switch .hint { font-weight: 400; }
+/* Treasury "Learning plan" (v0.6.0): a drop-down per subject, then the Nexus switches */
+.roster .plan { grid-column: 1 / -1; padding: .6rem .75rem; border: 1px solid var(--gold-soft); border-radius: 12px; background: var(--sky); }
+.roster .plan-title { font-family: "Cinzel", Georgia, serif; font-weight: 700; color: var(--gold); margin-bottom: .4rem; }
+.roster .plan-grid { display: grid; gap: .4rem .75rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 210px), 1fr)); }
+.roster .plan-grid label { margin: 0; display: flex; align-items: center; justify-content: space-between; gap: .5rem; font-weight: 500; }
+.roster .plan-grid select { width: auto; min-width: 8.5rem; }
+.roster .plan .hint { margin: .5rem 0; }
 .roster details.correct summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; color: var(--gold); font-weight: 700; }
 
 /* [CSS-FORMS] Treasury */

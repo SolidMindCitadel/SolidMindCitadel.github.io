@@ -15,7 +15,7 @@
   IMPORTANT: the PIN only keeps kids out. It is NOT real security
   (anyone with the browser's developer tools can get past it).
 
-  Depends on: citadel-core.js, citadel-core.css
+  Depends on: subjects.js, citadel-core.js, citadel-core.css
 
   Search these tags to jump to a section:
     [HTML-SETUP]    first visit: create the PIN
@@ -31,7 +31,8 @@
     [JS-ROSTER]     draws the hero list
     [JS-TESTS]      the test coin table (save / back to starting numbers)
     [JS-CORRECT]    "Correct coins" box for each hero
-    [JS-NEXUS]      "Nexus access" switch for each hero (off by default)
+    [JS-PLAN]       "Learning plan": Required / Optional / Off per subject (v0.6.0)
+    [JS-NEXUS]      "Nexus access" and "Nexus rewards" switches (both off by default)
     [JS-BACKUP]     download / copy a backup, restore from a file or text
     [JS-FORM]       add / edit hero form
     [JS-PINS]       create, check and change the PIN; reset
@@ -42,7 +43,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- [JS-UPDATE] [VERSION] Pages update themselves (v0.5.1). When this page opens, it asks
+<!-- [JS-UPDATE] [VERSION] Pages update themselves. When this page opens, it asks
      version.json (skipping the browser's saved copy) for the newest version. If that is newer
      than PAGE_VERSION below, the page reloads ONCE with "_fresh=<version>" in the address, so
      the browser fetches the newest copy. It never loops: it won't reload if the address
@@ -50,7 +51,7 @@
      version.json can't be loaded, nothing happens and the page works as usual. -->
 <script>
 (function () {
-  var PAGE_VERSION = "0.5.1"; // [VERSION] change with every version, same as the footer
+  var PAGE_VERSION = "0.6.0"; // [VERSION] change with every version, same as the footer
   var VERSION_FILE = "version.json";
   function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
     var x = String(a).split("."), y = String(b).split(".");
@@ -81,7 +82,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
-<link rel="stylesheet" href="citadel-core.css?v=0.5.1">
+<link rel="stylesheet" href="citadel-core.css?v=0.6.0">
 </head>
 <body>
 
@@ -251,11 +252,12 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.5.1</span>
+    <span class="version">v0.6.0</span>
   </div>
 </footer>
 
-<script src="citadel-core.js?v=0.5.1"></script>
+<script src="subjects.js?v=0.6.0"></script>
+<script src="citadel-core.js?v=0.6.0"></script>
 <script>
 (function () {
   var C = window.Citadel, el = C.el;
@@ -344,7 +346,7 @@
             "aria-label": "Edit " + hero.nickname, onclick: function () { editHero(hero.id); } }),
           el("button", { class: "btn danger small", type: "button", text: "Remove",
             "aria-label": "Remove " + hero.nickname, onclick: function () { removeHero(hero); } })),
-        nexusSwitch(hero),
+        planBox(hero),
         correctBox(hero)));
     });
   }
@@ -371,6 +373,35 @@
         } })));
   }
 
+  /* [JS-PLAN] Learning plan (v0.6.0): one drop-down per core subject
+     (Required / Optional / Off), then the two Nexus switches. Saves right away.
+     Only Required subjects count toward rank tests; Off hides a subject. */
+  function planBox(hero) {
+    var S = window.CitadelSubjects;
+    var box = el("div", { class: "plan" }, el("div", { class: "plan-title", text: "Learning plan" }));
+    var grid = el("div", { class: "plan-grid" });
+    S.core().forEach(function (sub) {
+      var sel = el("select", { id: "plan-" + sub.id + "-" + hero.id,
+        onchange: function () {
+          C.setPlan(hero.id, sub.id, sel.value);
+          drawRoster();
+          alertOk(hero.nickname + ": " + sub.name + " is now " + S.CHOICE_NAMES[sel.value] + ".");
+        } });
+      S.CHOICES.forEach(function (c) {
+        sel.appendChild(el("option", { value: c, selected: C.subjectChoice(hero, sub.id) === c, text: S.CHOICE_NAMES[c] }));
+      });
+      grid.appendChild(el("label", { for: sel.id }, el("span", { text: sub.emoji + " " + sub.name }), sel));
+    });
+    box.appendChild(grid);
+    box.appendChild(el("p", { class: "hint", text: "Required counts toward rank tests. Optional can be played (coins as usual) but doesn't count. Off hides the subject from " + hero.nickname + "." }));
+    if (C.testStatus(hero).state === "mastery") {
+      box.appendChild(el("p", { class: "hint", text: "Note: " + hero.nickname + "'s test is locked until mastery. Keep that skill's subject on (Required or Optional), or its game will be hidden." }));
+    }
+    box.appendChild(nexusSwitch(hero));
+    box.appendChild(rewardsSwitch(hero));
+    return box;
+  }
+
   /* [JS-NEXUS] "Nexus access" switch, off by default. Only heroes with it on
      see the Nexus banner on their page and can enter nexus.html. */
   function nexusSwitch(hero) {
@@ -381,6 +412,19 @@
       } });
     return el("label", { class: "switch nexus-switch" }, box,
       el("span", null, "Nexus access ", el("span", { class: "hint", text: "(PLC course games)" })));
+  }
+
+  /* "Nexus rewards" switch (v0.6.0), off by default. Nothing uses it yet: future
+     Nexus adventures may give bonus achievements, cosmetic rewards and gold dust,
+     only to heroes with this on. Nexus activities never give core gold coins. */
+  function rewardsSwitch(hero) {
+    var box = el("input", { type: "checkbox", role: "switch", checked: hero.nexusRewards,
+      onchange: function () {
+        C.updateHero(hero.id, { nexusRewards: box.checked });
+        alertOk(hero.nickname + (box.checked ? ": Nexus rewards on (used when Nexus adventures exist)." : ": Nexus rewards off."));
+      } });
+    return el("label", { class: "switch nexus-rewards-switch" }, box,
+      el("span", null, "Nexus rewards ", el("span", { class: "hint", text: "(gold dust and badges from future Nexus adventures; never gold coins)" })));
   }
 
   // Skill grades from games: average of the last 10 answers, star when mastered.

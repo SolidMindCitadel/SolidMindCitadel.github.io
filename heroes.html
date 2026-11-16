@@ -9,7 +9,7 @@
   (Citadel.nextPage, see [JS-NEXT] in citadel-core.js).
   Heroes are added, edited and removed by a parent in the Treasury.
 
-  Depends on: citadel-core.js, citadel-core.css
+  Depends on: subjects.js, citadel-core.js, citadel-core.css
 
   Search these tags to jump to a section:
     [HTML-TOP]      links back to the gate and to the Treasury
@@ -25,7 +25,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- [JS-UPDATE] [VERSION] Pages update themselves (v0.5.1). When this page opens, it asks
+<!-- [JS-UPDATE] [VERSION] Pages update themselves. When this page opens, it asks
      version.json (skipping the browser's saved copy) for the newest version. If that is newer
      than PAGE_VERSION below, the page reloads ONCE with "_fresh=<version>" in the address, so
      the browser fetches the newest copy. It never loops: it won't reload if the address
@@ -33,7 +33,7 @@
      version.json can't be loaded, nothing happens and the page works as usual. -->
 <script>
 (function () {
-  var PAGE_VERSION = "0.5.1"; // [VERSION] change with every version, same as the footer
+  var PAGE_VERSION = "0.6.0"; // [VERSION] change with every version, same as the footer
   var VERSION_FILE = "version.json";
   function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
     var x = String(a).split("."), y = String(b).split(".");
@@ -63,7 +63,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
-<link rel="stylesheet" href="citadel-core.css?v=0.5.1">
+<link rel="stylesheet" href="citadel-core.css?v=0.6.0">
 </head>
 <body>
 
@@ -105,11 +105,12 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.5.1</span>
+    <span class="version">v0.6.0</span>
   </div>
 </footer>
 
-<script src="citadel-core.js?v=0.5.1"></script>
+<script src="subjects.js?v=0.6.0"></script>
+<script src="citadel-core.js?v=0.6.0"></script>
 <script>
 // [JS-CARDS] One card per hero. Text is added safely with Citadel.el (never as HTML).
 (function () {
