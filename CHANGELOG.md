@@ -7,6 +7,45 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.6.0 – Learning paths – Nov 16, 2026
+
+**What was added or changed**
+- **Subjects (`subjects.js`).** A short list of subjects, each marked core or Nexus.
+  Core: Math, Reading, Science, Art. Nexus: PLC. Pizza Party is tagged Math. Ladder Race has
+  no subject, because it is a standalone game.
+- **Learning plan in the Treasury.** For each hero:
+  - a drop-down per core subject: **Required**, **Optional** or **Off**;
+  - the existing "Nexus access" switch;
+  - a new **"Nexus rewards"** switch, off by default. Nothing uses it yet; it is for future
+    Nexus adventures, which may give gold dust and badges, never gold coins.
+- **Only Required subjects count.**
+  - Rank tests only ask about Required subjects.
+  - The "no new games while a test is waiting" rule only blocks games in Required subjects.
+  - Optional subjects can be played and give gold coins as usual, but don't count toward tests.
+  - Off subjects are hidden from the hero: their games, and the Proving Grounds banner when
+    Math is Off.
+  - If no subject is Required, the hero has no rank test for now. Nothing earned is lost.
+- **"My subjects" on each hero's page**, with Required or Optional next to each (and PLC as
+  "Nexus" for heroes with Nexus access).
+- **Existing heroes keep everything** (coins, rank, trophies, history, skills, settings).
+  They get Math Required and Reading, Science and Art Optional, so nothing changes for them.
+  New heroes start the same way.
+- `CLAUDE.md`: new "Goals and how we work" and "Learning paths" sections.
+- Version number updated to v0.6.0 on every page.
+
+**Files changed**
+- New: `subjects.js`
+- Changed: `citadel-core.js` (learning plan, rules), `citadel-questions.js` (skill areas by
+  subject, for future rank tests), `citadel-core.css`, `treasury.html`, `hero.html`,
+  `test.html`, `proving-grounds.html`, and every page (loads `subjects.js`, new version
+  number), `version.json`, `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+- So Ariet can choose what each hero studies, and so only the subjects that matter for a hero
+  decide their rank, while the Nexus stays separate from core progress.
+
+---
+
 ## v0.5.1 – Pages update themselves – Nov 15, 2026
 
 **What was changed**

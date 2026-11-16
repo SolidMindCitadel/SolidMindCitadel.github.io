@@ -15,7 +15,9 @@
   and the step-by-step "here's why" explanations for wrong answers, so a
   test page can show questions exactly like the games do.
 
-  Depends on: nothing (citadel-core.js is not needed here).
+  Depends on: nothing (citadel-core.js is not needed here). subjects.js is
+              only needed for areasForSubjects (rank tests use Required
+              subjects only).
   Used by:    games/*-questions.js (they register makers), games/*.html,
               and later test.html.
 
@@ -94,6 +96,17 @@
       out.push({ area: m.area, areaLabel: m.areaLabel, game: m.game });
     });
     return out;
+  }
+
+  // v0.6.0: skill areas for a level that belong to the given subjects only
+  // (e.g. a hero's REQUIRED core subjects, from Citadel.requiredSubjects).
+  // Rank tests must use this so Optional, Off and Nexus subjects never
+  // appear on a rank test. The subject of an area is its game's subject in
+  // subjects.js; without subjects.js nothing matches.
+  function areasForSubjects(level, subjectIds) {
+    var S = window.CitadelSubjects;
+    if (!S || !Array.isArray(subjectIds)) return [];
+    return areas(level).filter(function (x) { return subjectIds.indexOf(S.gameSubject(x.game)) >= 0; });
   }
 
   function build(m, theme, avoidSig) {
@@ -416,7 +429,7 @@
 
   window.CitadelQuestions = {
     THEMES: THEMES, R: R,
-    register: register, areas: areas, forGame: forGame, forTest: forTest,
+    register: register, areas: areas, areasForSubjects: areasForSubjects, forGame: forGame, forTest: forTest,
     draw: draw, explain: explain, circle: circle
   };
 })();

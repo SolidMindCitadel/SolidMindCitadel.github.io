@@ -7,7 +7,8 @@
       <script src="citadel-core.js"></script>
   (games in games/ will use "../citadel-core.js").
 
-  Depends on: nothing. No frameworks, no server.
+  Depends on: subjects.js (load it first; if it is missing, every game
+              simply counts as having no subject). No frameworks, no server.
   Used by:    every page: heroes.html, hero.html, treasury.html, test.html,
               visitor.html, proving-grounds.html, games/*.html
 
@@ -30,7 +31,8 @@
     [JS-BACKUP]    backup and restore (file or copied text)
     [JS-PIN]       Treasury PIN (a gate for kids, NOT real security)
     [JS-HALLS]     the four hall banners (shared drawing code)
-    [JS-NEXUS]     "Nexus access": which heroes may see the Nexus
+    [JS-PLAN]      learning plan: Required / Optional / Off per subject (v0.6.0)
+    [JS-NEXUS]     "Nexus access" and "Nexus rewards" switches
     [JS-NEXT]      after choosing a hero, go back to the hall they came from
     [JS-HELPERS]   small helpers for building the page
 
@@ -41,7 +43,7 @@
   "use strict";
 
   // [JS-VERSION] Change this with every pull request (see CLAUDE.md "Versions").
-  var VERSION = "0.5.1";
+  var VERSION = "0.6.0";
 
   /* ---------------------------------------------------------------
      [JS-STORAGE]
@@ -131,6 +133,12 @@
     if (!h.bestScores || typeof h.bestScores !== "object") h.bestScores = {};
     if (!h.games || typeof h.games !== "object") h.games = {}; // added in v0.4.0
     if (typeof h.nexusAccess !== "boolean") h.nexusAccess = false; // added in v0.5.0, off by default
+    if (typeof h.nexusRewards !== "boolean") h.nexusRewards = false; // added in v0.6.0, off by default
+    // Added in v0.6.0. Heroes saved before then get Math Required and the other
+    // core subjects Optional, so nothing changes for them.
+    if (!h.plan || typeof h.plan !== "object") h.plan = {};
+    var def = defaultPlan();
+    for (var sub in def) if (CHOICES.indexOf(h.plan[sub]) < 0) h.plan[sub] = def[sub];
     if (!h.settings || typeof h.settings !== "object") h.settings = {};
     if (typeof h.settings.sound !== "boolean") h.settings.sound = DEFAULT_SETTINGS.sound;
     if (typeof h.settings.readAloud !== "boolean") h.settings.readAloud = DEFAULT_SETTINGS.readAloud;
@@ -219,6 +227,10 @@
      6. While a test is unlocked, failed-once or locked for mastery,
         no NEW games or challenges unlock for that hero
         (Citadel.newGamesAllowed). Games they already have still work.
+        Since v0.6.0 this only applies to games in REQUIRED core subjects
+        (see [JS-PLAN]); Optional subjects and the Nexus are never blocked.
+        Rank tests only ask about Required subjects
+        (CitadelQuestions.areasForSubjects with Citadel.requiredSubjects).
 
      An "area" is one specific lesson or skill, like "adding-within-10"
      or "latch-circuits". Every test question is tagged with exactly one.
@@ -260,11 +272,14 @@
        "ready"       unlocked: the hero may take it when they choose
        "retake-coins" failed once; retake unlocks at the coin amount
        "retake"      failed once; the one retake is ready
-       "mastery"     failed twice; locked until weak areas reach 90% */
+       "mastery"     failed twice; locked until weak areas reach 90%
+       "none"        no Required subject in the learning plan, so there is
+                     nothing to test yet (v0.6.0). Saved test progress is kept. */
   function testStatus(hero) {
     var data = load();
     if (hero.step >= TOP_STEP) return { state: "top", test: null, cost: 0, coins: hero.coins, weakAreas: [] };
     var cost = data.testCoins[hero.step];
+    if (S() && !requiredSubjects(hero).length) return { state: "none", test: testInfo(hero.step), cost: cost, coins: hero.coins, weakAreas: [] };
     var t = hero.test;
     var state;
     if (t.locked) state = "mastery";
@@ -281,6 +296,7 @@
     var s = testStatus(hero);
     switch (s.state) {
       case "top": return "Top of the ladder. No more tests.";
+      case "none": return "No rank tests for now: no subject is Required in the learning plan.";
       case "coins": return "Locked: unlocks at " + s.cost + " coins (has " + s.coins + ").";
       case "ready": return "Ready! Take it whenever you choose.";
       case "retake-coins": return "Failed once. One retake left; it unlocks at " + s.cost + " coins (has " + s.coins + ").";
@@ -297,7 +313,7 @@
   // Rule 6. Games/halls should call this before unlocking anything NEW.
   function newGamesAllowed(hero) {
     var st = testStatus(hero).state;
-    return st === "coins" || st === "top";
+    return st === "coins" || st === "top" || st === "none";
   }
 
   /* Grades a finished test. "answers" is a list, one per question:
@@ -459,6 +475,72 @@
     return out;
   }
 
+  /* [JS-PLAN] The learning plan (v0.6.0). For each CORE subject in
+     subjects.js the parent picks, per hero, in the Treasury:
+       "required"  counts toward rank tests and rule 6
+       "optional"  can be played (coins as usual) but never counts toward
+                   rank tests, and is never blocked by rule 6
+       "off"       hidden from that hero
+     Nexus subjects (PLC) are not in the plan: "Nexus access" opens them,
+     and they never block or count toward core progression.
+     Visitors see every core subject as Optional. */
+  var CHOICES = ["required", "optional", "off"];
+  function S() { return window.CitadelSubjects || null; }
+  function defaultPlan() {
+    var s = S();
+    var p = {};
+    if (s) for (var k in s.DEFAULT_PLAN) p[k] = s.DEFAULT_PLAN[k];
+    return p;
+  }
+
+  // "required", "optional" or "off" for one subject. Nexus subjects are
+  // "optional" with Nexus access (they never count), otherwise "off".
+  function subjectChoice(hero, subjectId) {
+    var s = S(), subj = s && s.get(subjectId);
+    if (!subj || !hero) return "off";
+    if (subj.track === "nexus") return hero.id !== VISITOR_ID && hero.nexusAccess ? "optional" : "off";
+    if (hero.id === VISITOR_ID) return "optional";
+    var c = hero.plan && hero.plan[subjectId];
+    return CHOICES.indexOf(c) >= 0 ? c : "optional";
+  }
+
+  // Subject ids the hero must do (only these count toward rank tests).
+  function requiredSubjects(hero) {
+    var s = S();
+    if (!s || !hero) return [];
+    return s.core().filter(function (x) { return subjectChoice(hero, x.id) === "required"; })
+      .map(function (x) { return x.id; });
+  }
+
+  // For "My subjects": [{id, name, emoji, track, choice}] without Off subjects.
+  function mySubjects(hero) {
+    var s = S();
+    if (!s || !hero) return [];
+    return s.SUBJECTS.map(function (x) {
+      return { id: x.id, name: x.name, emoji: x.emoji, track: x.track, choice: subjectChoice(hero, x.id) };
+    }).filter(function (x) { return x.choice !== "off"; });
+  }
+
+  function gameSubject(gameId) { var s = S(); return s ? s.gameSubject(gameId) : null; }
+
+  // false when the game's subject is Off for this hero (the game is hidden).
+  function gameVisible(heroId, gameId) {
+    var subj = gameSubject(gameId);
+    if (!subj) return true;
+    return subjectChoice(getHero(heroId), subj) !== "off";
+  }
+
+  function setPlan(heroId, subjectId, choice) {
+    var s = S(), subj = s && s.get(subjectId);
+    if (!subj || subj.track !== "core" || CHOICES.indexOf(choice) < 0) throw new Error("Unknown subject or choice.");
+    var data = load();
+    var i = findById(data.heroes, heroId);
+    if (i < 0) throw new Error("That hero is no longer here.");
+    data.heroes[i].plan[subjectId] = choice;
+    save(data);
+    return data.heroes[i];
+  }
+
   /* [JS-GAMES] Which games a hero may play, and each game's own data.
      STARTER_GAMES are games every hero has from the start. They are
      never blocked by rule 6 ("no NEW games while a test is waiting").
@@ -469,10 +551,17 @@
      Visitors get the same calls, kept in memory only. */
   var STARTER_GAMES = ["pizza-party"];
 
+  // v0.6.0 learning plan: a game whose subject is Off is closed. Games in an
+  // Optional subject, and Nexus games, are never blocked by rule 6, because
+  // only Required subjects take part in rank tests.
   function canPlayGame(heroId, gameId) {
-    if (STARTER_GAMES.indexOf(gameId) >= 0) return true;
     var hero = getHero(heroId);
     if (!hero) return false;
+    var subj = gameSubject(gameId);
+    var choice = subj ? subjectChoice(hero, subj) : null;
+    if (choice === "off") return false;
+    if (STARTER_GAMES.indexOf(gameId) >= 0) return true;
+    if (choice === "optional") return true;
     return !!hero.games[gameId] || newGamesAllowed(hero);
   }
 
@@ -500,6 +589,8 @@
          gameTotals, // coins earned per game ([JS-COINS])
          trophies,   // [{step, date}] one per tier/rank reached ([JS-TROPHIES])
          bestScores, // best score per game ([JS-TROPHIES])
+         nexusAccess, nexusRewards, // Treasury switches ([JS-NEXUS])
+         plan,       // { math: "required", ... } learning plan ([JS-PLAN])
          settings }  // { sound, readAloud } ([JS-SETTINGS])
      Nicknames only. Never real names (the site is public, and the
      Treasury reminds the parent of this).
@@ -562,6 +653,8 @@
       areas: {},
       games: {},
       nexusAccess: false, // the parent turns this on in the Treasury
+      nexusRewards: false, // v0.6.0: off by default; for future Nexus adventures
+      plan: defaultPlan(), // v0.6.0: Required / Optional / Off per core subject
       history: [],
       gameTotals: {},
       trophies: [{ step: 0, date: today() }], // Apprentice – Bronze from day one
@@ -589,6 +682,7 @@
     if ("color" in changes) hero.color = pick(COLORS, changes.color).id;
     if ("level" in changes && LEVELS.indexOf(Number(changes.level)) >= 0) hero.level = Number(changes.level);
     if ("nexusAccess" in changes) hero.nexusAccess = changes.nexusAccess === true;
+    if ("nexusRewards" in changes) hero.nexusRewards = changes.nexusRewards === true;
     save(data);
     return hero;
   }
@@ -995,12 +1089,14 @@
      needsNexusAccess: the banner is drawn only for heroes whose
      "Nexus access" is on (see [JS-NEXUS]); for everyone else, and for
      visitors, it is left out completely, not shown as closed.
+     subjects: an open hall is left out when every one of its subjects is
+     Off in the hero's learning plan (v0.6.0), so Off subjects stay hidden.
      --------------------------------------------------------------- */
   var HALLS = [
     { name: "The Imperial Library", href: null,
       text: "Learn how things work. Stories, puzzles and lessons that start every idea.",
       icon: '<path d="M10 44h40v8H10zM14 36h38v8H14zM10 28h40v8H10z"/><path d="M16 31h20M20 39h24M16 47h22"/>' },
-    { name: "The Proving Grounds", href: "proving-grounds.html",
+    { name: "The Proving Grounds", href: "proving-grounds.html", subjects: ["math"],
       text: "Test what you know. Challenges that show what works, and why.",
       icon: '<path d="M26 8h12M28 8v16L14 50a4 4 0 0 0 3.5 6h29a4 4 0 0 0 3.5-6L36 24V8"/><path d="M19 42h26"/><circle cx="28" cy="48" r="1.5"/><circle cx="36" cy="46" r="1.5"/>' },
     { name: "The Forge", href: null,
@@ -1018,6 +1114,10 @@
     list.textContent = "";
     HALLS.forEach(function (hall) {
       if (hall.needsNexusAccess && !hasNexusAccess(heroId)) return; // hidden, not "closed"
+      if (hall.href && hall.subjects && heroId && getHero(heroId)) {
+        var hero = getHero(heroId);
+        if (hall.subjects.every(function (sid) { return subjectChoice(hero, sid) === "off"; })) return;
+      }
       var svg = document.createElementNS(SVG_NS, "svg");
       svg.setAttribute("viewBox", "0 0 64 64");
       svg.setAttribute("aria-hidden", "true");
@@ -1034,12 +1134,19 @@
 
   /* [JS-NEXUS] The Nexus holds Ariet's PLC course games. A parent turns
      "Nexus access" on per hero in the Treasury (off by default). Visitors
-     never have it. Like the PIN, this is a gate for kids, not security:
+     never have it. "Nexus rewards" (v0.6.0, also off by default) will let
+     future Nexus adventures give bonus achievements, cosmetic rewards and
+     gold dust; Nexus activities NEVER give core gold coins. Nothing uses
+     it yet; it is Ariet's switch because gold dust may become real money. Like the PIN, this is a gate for kids, not security:
      the pages are public. */
   function hasNexusAccess(heroId) {
     if (!heroId || heroId === VISITOR_ID) return false;
     var hero = getHero(heroId);
     return !!(hero && hero.nexusAccess);
+  }
+  function hasNexusRewards(heroId) {
+    if (!hasNexusAccess(heroId)) return false;
+    return !!getHero(heroId).nexusRewards;
   }
 
   /* [JS-NEXT] When someone opens a hall (or a game) before choosing a
@@ -1068,7 +1175,10 @@
     newGamesAllowed: newGamesAllowed, gradeTest: gradeTest, finishTest: finishTest,
     reportAreaScore: reportAreaScore, reportAnswer: reportAnswer, skillGrades: skillGrades,
     STARTER_GAMES: STARTER_GAMES.slice(), canPlayGame: canPlayGame,
-    hasNexusAccess: hasNexusAccess, nextPage: nextPage, NEXT_PAGES: NEXT_PAGES,
+    hasNexusAccess: hasNexusAccess, hasNexusRewards: hasNexusRewards,
+    subjectChoice: subjectChoice, requiredSubjects: requiredSubjects, mySubjects: mySubjects,
+    gameSubject: gameSubject, gameVisible: gameVisible, setPlan: setPlan, PLAN_CHOICES: CHOICES.slice(),
+    nextPage: nextPage, NEXT_PAGES: NEXT_PAGES,
     getGameData: getGameData, setGameData: setGameData,
     coinHistory: coinHistory, gameTotals: gameTotals, correctCoins: correctCoins,
     trophies: trophies, recordBestScore: recordBestScore, bestScores: bestScores,

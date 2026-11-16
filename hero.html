@@ -10,12 +10,13 @@
   scores) and the hero's own settings (Sound, Read words out loud).
   Visitors are sent to visitor.html instead.
 
-  Depends on: citadel-core.js, citadel-core.css
+  Depends on: subjects.js, citadel-core.js, citadel-core.css
 
   Search these tags to jump to a section:
     [HTML-TOP]      links back to the hero list
     [HTML-HERO]     crest, nickname, coins, rank and tier, level
     [HTML-TEST]     the hero's next test and its status
+    [HTML-SUBJECTS] "My subjects": Required or Optional (v0.6.0)
     [HTML-HALLS]    the four halls (drawn by Citadel.renderHalls)
     [HTML-CHEST]    treasure chest: coins per game and coin history
     [HTML-TROPHIES] trophy hall: rank/tier badges and best scores
@@ -23,6 +24,7 @@
     [HTML-FOOTER]   bottom of the page and version number
     [JS-UPDATE]     reloads the page once when a newer version is out
     [JS-HOME]       fills in the page for the chosen hero
+    [JS-SUBJECTS]   draws "My subjects" from the learning plan
     [JS-CHEST]      draws the treasure chest
     [JS-TROPHIES]   draws the trophy hall
     [JS-SETTINGS]   the two switches
@@ -33,7 +35,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- [JS-UPDATE] [VERSION] Pages update themselves (v0.5.1). When this page opens, it asks
+<!-- [JS-UPDATE] [VERSION] Pages update themselves. When this page opens, it asks
      version.json (skipping the browser's saved copy) for the newest version. If that is newer
      than PAGE_VERSION below, the page reloads ONCE with "_fresh=<version>" in the address, so
      the browser fetches the newest copy. It never loops: it won't reload if the address
@@ -41,7 +43,7 @@
      version.json can't be loaded, nothing happens and the page works as usual. -->
 <script>
 (function () {
-  var PAGE_VERSION = "0.5.1"; // [VERSION] change with every version, same as the footer
+  var PAGE_VERSION = "0.6.0"; // [VERSION] change with every version, same as the footer
   var VERSION_FILE = "version.json";
   function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
     var x = String(a).split("."), y = String(b).split(".");
@@ -71,7 +73,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Alegreya+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <!-- [VERSION] "?v=" makes browsers load the newest shared files after each update -->
-<link rel="stylesheet" href="citadel-core.css?v=0.5.1">
+<link rel="stylesheet" href="citadel-core.css?v=0.6.0">
 </head>
 <body>
 
@@ -104,6 +106,14 @@
       <p id="test-text"></p>
       <ul class="weak-list" id="weak-list" hidden></ul>
       <div class="btn-row" id="test-go" hidden><a class="btn" id="test-link" href="#">Go to the test</a></div>
+    </section>
+
+    <!-- [HTML-SUBJECTS] "My subjects" from the learning plan the parent sets in the
+         Treasury (v0.6.0). Off subjects are not listed. -->
+    <section class="panel" aria-labelledby="subjects-title">
+      <h2 id="subjects-title">My subjects</h2>
+      <ul class="subjects" id="subjects"></ul>
+      <p class="hint" id="subjects-note">Required subjects count toward your rank tests. Optional ones are just for fun and practice.</p>
     </section>
 
     <!-- [HTML-HALLS] -->
@@ -159,11 +169,12 @@
   <div class="wrap">
     <strong>SolidMind Citadel</strong>
     Envision a Brighter Tomorrow.
-    <span class="version">v0.5.1</span>
+    <span class="version">v0.6.0</span>
   </div>
 </footer>
 
-<script src="citadel-core.js?v=0.5.1"></script>
+<script src="subjects.js?v=0.6.0"></script>
+<script src="citadel-core.js?v=0.6.0"></script>
 <script>
 // [JS-HOME] Reads ?id=... from the address and shows that hero.
 (function () {
@@ -187,7 +198,8 @@
   // Next test: name, status, weak areas (if locked), and a link when it can be taken.
   var st = C.testStatus(hero);
   var STATE_NAMES = { top: "Top of the ladder", coins: "Locked: needs coins", ready: "Ready",
-    "retake-coins": "Failed once", retake: "Retake ready", mastery: "Locked until mastery" };
+    "retake-coins": "Failed once", retake: "Retake ready", mastery: "Locked until mastery",
+    none: "No tests for now" };
   document.getElementById("test-name").textContent = st.test ? st.test.name : "You are a Master Engineer \u2013 Gold!";
   var tag = document.getElementById("test-state");
   tag.textContent = STATE_NAMES[st.state];
@@ -201,16 +213,28 @@
     });
     list.hidden = false;
   }
-  if (st.state !== "top") {
+  if (st.state !== "top" && st.state !== "none") {
     document.getElementById("test-link").href = "test.html?id=" + encodeURIComponent(hero.id);
     document.getElementById("test-go").hidden = false;
   }
+
+  /* [JS-SUBJECTS] My subjects, with Required or Optional next to each.
+     The Nexus (PLC) shows only when Nexus access is on; it never counts. */
+  var subs = C.mySubjects(hero), subList = document.getElementById("subjects");
+  subs.forEach(function (x) {
+    var tagText = x.track === "nexus" ? "Nexus" : (x.choice === "required" ? "Required" : "Optional");
+    subList.appendChild(C.el("li", { class: "subject subject-" + (x.track === "nexus" ? "nexus" : x.choice) },
+      C.el("span", { class: "subject-emoji", "aria-hidden": "true", text: x.emoji }),
+      C.el("span", { class: "subject-name", text: x.name }),
+      C.el("span", { class: "subject-tag", text: tagText })));
+  });
+  if (!subs.length) document.getElementById("subjects-note").textContent = "No subjects yet. A parent can choose them in the Treasury.";
 
   C.renderHalls(document.getElementById("halls"), hero.id);
   // Rule 6: while a test is waiting, no NEW games open. Say so kindly.
   if (!C.newGamesAllowed(hero)) {
     document.querySelector(".halls-sub").textContent =
-      "New games stay closed until your test is done. Games you already have (like Pizza Party) can still be played.";
+      "New games in your Required subjects stay closed until your test is done. Games you already have (like Pizza Party) and Optional subjects can still be played.";
   }
 
   var el = C.el;
