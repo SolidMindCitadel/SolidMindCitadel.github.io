@@ -319,6 +319,24 @@ Ladder Race is the model.
   change every one to the new number (the old number must not remain anywhere). New pages
   and new shared files must use `?v=` too. A changed `?v=` makes browsers fetch the new file.
   HTML pages themselves may stay cached for up to about 10 minutes after a merge (GitHub Pages).
+- **Pages update themselves (`version.json`, built in v0.5.1):**
+  - The main folder has `version.json`, holding the current version: `{"version": "0.5.1"}`.
+  - Every page has a small `[JS-UPDATE]` script in its `<head>` with
+    `PAGE_VERSION`. When the page opens, it fetches `version.json` without using the browser's
+    saved copy. If that version is newer, the page reloads **once** with `_fresh=<version>` in its
+    address, so the newest copy loads.
+  - It can't loop: it never reloads if the address already has that `_fresh` mark, or if
+    this tab already tried for that version. If `version.json` can't be loaded, the page just
+    works as usual.
+- **Every new version updates all of these together:**
+  1. `version.json`
+  2. `PAGE_VERSION` in every page's `[JS-UPDATE]` script
+  3. the footer text
+  4. every `?v=` number
+  5. `VERSION` in `citadel-core.js`
+
+  Search all files for the old number; it must not remain anywhere. New pages must include the
+  `[JS-UPDATE]` script (copy it from any page; use `../version.json` for pages in subfolders).
 - Add a line to the **change log at the bottom of this file** too.
 - In every pull request description, include a short **"How to undo this version"** note
   explaining how to use GitHub's **Revert** button on the merged pull request.
@@ -364,6 +382,7 @@ Ladder Race is the model.
 | `citadel-core.js` | Shared code: heroes, coins and history, rank ladder, tests, area scores, trophies, settings, visitor, backup, levels, PIN, halls |
 | `citadel-core.css` | Shared look for the pages above |
 | `CHANGELOG.md` | Every version, newest first |
+| `version.json` | The current version; pages compare against it and reload once when it's newer |
 
 ## Change log
 
@@ -388,3 +407,5 @@ Ladder Race is the model.
   the Treasury, reusable race board (`citadel-race.js`), `?v=` cache busting on every page,
   return to the hall after choosing a hero (`heroes.html?next=`), "How every game teaches"
   rules, and planned quest dice rules and story lessons.
+- Nov 15, 2026: **v0.5.1 Pages update themselves.** New `version.json`; every page checks it when
+  it opens and reloads once if a newer version is out (no loops; works normally if it can't load).

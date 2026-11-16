@@ -7,6 +7,34 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.5.1 – Pages update themselves – Nov 15, 2026
+
+**What was changed**
+- **New `version.json`** in the main folder, holding the current version.
+- **Every page checks for a new version when it opens.** This covers the main page, heroes,
+  hero pages, the Treasury, the test page, the visitor page, the Proving Grounds and the
+  Nexus, Pizza Party and Ladder Race.
+  - Each page asks `version.json` for the newest version, skipping the browser's saved copy.
+  - If a newer version is out, the page reloads itself once with a fresh address, so the
+    newest copy appears without anyone doing anything.
+  - It can never reload over and over.
+  - If `version.json` can't be loaded (for example offline), the page simply works as usual.
+- `CLAUDE.md`: every new version now updates `version.json` along with the page versions,
+  footers and `?v=` numbers.
+- Version number updated to v0.5.1 on every page.
+
+**Files changed**
+- New: `version.json`
+- Changed: every page (`index.html`, `heroes.html`, `hero.html`, `treasury.html`, `test.html`,
+  `visitor.html`, `proving-grounds.html`, `nexus.html`, `games/pizza-party.html`,
+  `nexus/ladder-race.html`), `citadel-core.js` (version number), `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+After v0.5.0, a hero page kept showing v0.4.0 for a long time, even after refreshing. The `?v=`
+fix only covered shared script and style files, not the pages themselves.
+
+---
+
 ## v0.5.0 – The Nexus, Ladder Race and game rules – Nov 15, 2026
 
 **What was added**
