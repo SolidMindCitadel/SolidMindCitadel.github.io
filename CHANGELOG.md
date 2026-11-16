@@ -7,6 +7,47 @@ Version numbers look like `v0.2.0`:
 
 ---
 
+## v0.7.0 – Chapter framework and sample adventure – Nov 16, 2026
+
+**What was added or changed**
+- **The chapter engine** (`citadel-adventure.js`, `citadel-adventure.css`). One shared engine
+  plays any chapter from its data file, in the Imperial Library or (later) the Nexus. Every
+  chapter has five steps:
+  - Story, Lesson, Challenge, Practice game (a race against the computer) and Mastery check.
+  - The next step unlocks when the current one is done. Finished steps can be replayed anytime.
+  - There is no timer anywhere.
+- **Mastery check:** 10 questions, right on the first try only.
+  - 9 of 10 (90%) finishes the chapter.
+  - Level 1 plays it as two rounds of 5, with a celebration in between.
+  - Below 90%, the kid sees which skills to practise and can try again with new questions.
+- **Coins:** the Practice game and Mastery check give gold coins, like Pizza Party. Story,
+  Lesson and Challenge give none. Nexus chapters will never give gold coins.
+- **Saved progress:** steps done and the chosen character are saved per hero on the device.
+- **Character choice:** optional, with placeholder pictures until the real artwork exists.
+- **The Imperial Library is open** (`library.html`), with one **sample chapter**: "The Pizza
+  Shop Puzzle".
+  - It is Math, uses Pizza Party's skills at the hero's level, and is always open.
+  - Its story, lesson and challenge text are placeholders, marked
+    "Sample – real stories coming soon".
+- **`CHAPTER-TEMPLATE.md`:** the plain-language list of what to write for a chapter, with a
+  short example. Real chapters, starting with The Lost Pyramid Chapter 1, are added this way.
+- Library banner opened on the main page, hero pages and the visitor page. Choosing a hero
+  from the Library comes back to the Library.
+- Version number updated to v0.7.0 on every page.
+
+**Files changed**
+- New: `citadel-adventure.js`, `citadel-adventure.css`, `library.html`, `adventures/play.html`,
+  `adventures/sample/chapter-1.js`, `CHAPTER-TEMPLATE.md`
+- Changed: `citadel-core.js` (Library opened, chapters pass their own subject to
+  `canPlayGame`), `index.html`, `hero.html`, `visitor.html`, every page (version number),
+  `subjects.js` (comment only), `version.json`, `CLAUDE.md`, `CHANGELOG.md`
+
+**Why**
+- So real chapters (stories, lessons, games) can be added as data only, and the kids can play a
+  first sample chapter today.
+
+---
+
 ## v0.6.0 – Learning paths – Nov 16, 2026
 
 **What was added or changed**

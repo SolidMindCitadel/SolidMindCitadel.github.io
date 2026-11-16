@@ -11,7 +11,7 @@
      version.json can't be loaded, nothing happens and the page works as usual. -->
 <script>
 (function () {
-  var PAGE_VERSION = "0.6.0"; // [VERSION] change with every version, same as the footer
+  var PAGE_VERSION = "0.7.0"; // [VERSION] change with every version, same as the footer
   var VERSION_FILE = "../version.json";
   function newer(a, b) { // true if version a is newer than version b (so "0.10.0" is newer than "0.9.2")
     var x = String(a).split("."), y = String(b).split(".");
@@ -63,7 +63,7 @@
       [HTML-BACK]    a back button to the Nexus (keeps the hero in the address)
       [HTML-FOOTER]  the Citadel version footer ([VERSION])
       [CSS-CITADEL]  the small styles for those two
-      [JS-UPDATE]    reloads the page once when a newer Citadel version is out (v0.6.0)
+      [JS-UPDATE]    reloads the page once when a newer Citadel version is out (v0.7.0)
     It is reached only from nexus.html, for heroes with "Nexus access" on.
   ======================================================================
 -->
@@ -183,7 +183,7 @@ button:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid 
   </section>
 </div>
 <!-- [HTML-FOOTER] [VERSION] update the version text with every pull request -->
-<footer class="citadel-foot">SolidMind Citadel · <span class="version">v0.6.0</span></footer>
+<footer class="citadel-foot">SolidMind Citadel · <span class="version">v0.7.0</span></footer>
 </div>
 
 <script>

@@ -13,7 +13,7 @@
              counts toward, core progression.
 
   Depends on: nothing. Load it BEFORE citadel-core.js on every page:
-      <script src="subjects.js?v=0.6.0"></script>
+      <script src="subjects.js?v=<version>"></script>
   Used by:    citadel-core.js (learning plan, which games are open),
               citadel-questions.js (skill areas per subject, for future tests),
               hero.html ("My subjects"), treasury.html ("Learning plan")
